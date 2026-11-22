@@ -42,10 +42,21 @@ function snes9x (){
 
 
 
+function preparar_directorios(){
+  local repo_dir="$1"
+  echo -e "[!] Preparando directorios de ROMs e íconos"
+
+  mkdir -p ~/retro-console/roms ~/retro-console/icons
+  cp -n "$repo_dir"/src/icons/*.png ~/retro-console/icons/
+
+  echo -e "[+] Directorios listos en ~/retro-console"
+}
+
 function main(){
   local repo_dir="$(pwd)"
   install_python_deps "$repo_dir"
   snes9x
+  preparar_directorios "$repo_dir"
 }
 
 

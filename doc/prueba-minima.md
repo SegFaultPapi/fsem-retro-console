@@ -49,15 +49,12 @@ en pantalla. No incluye ningún entorno de escritorio ni gestor de ventanas, por
 se mantiene conforme a la restricción del proyecto de no utilizar un entorno de
 escritorio.
 
-### 4. Preparar los directorios de ROMs e íconos
+### 4. Agregar ROMs de prueba
 
-```bash
-mkdir -p ~/retro-console/roms ~/retro-console/icons
-```
-
-- Colocar los archivos `apagadoScale.png`, `restartScale.png` e `instrucciones.png`
-  en `~/retro-console/icons/`.
-- Colocar al menos una ROM `.smc`/`.sfc` de prueba en `~/retro-console/roms/`.
+El script `autorun.sh` ya crea `~/retro-console/roms` y `~/retro-console/icons`, y copia
+automáticamente los íconos de la interfaz desde `src/icons/`. Solo falta colocar al menos
+una ROM `.smc`/`.sfc` de prueba en `~/retro-console/roms/` (ver
+[`doc/fuentes-roms.md`](fuentes-roms.md) para fuentes legales).
 
 ### 5. Configurar el inicio de la interfaz
 
