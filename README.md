@@ -14,35 +14,6 @@ chmod +x autorun.sh
 ./autorun.sh
 ```
 
-### Instalación de xboxdrv
-
-```bash
-sudo apt-get install \
- g++ \
- libboost-dev \
- scons \
- pkg-config \
- libusb-1.0-0-dev \
- git-core \
- libx11-dev \
- libudev-dev \
- x11proto-core-dev \
- libdbus-glib-1-dev
-```
-
-Ahora procedemos a descargar y compilar el driver.
-
-```bash
-# Descarga del repositorio oficial
-git clone https://github.com/xboxdrv/xboxdrv.git
-# Entramos en la carpeta del repositorio
-cd xboxdrv
-# Compilamos el proyecto
-scons
-# Instalamos este ejecutable en el sistema
-make install
-```
-
 ### Instalación del Snes9x
 
 ```bash
@@ -73,117 +44,43 @@ pip install -r requirements.txt
 
 # Configuración en la Raspberry Pi para la detección del control
 
+El programa (`src/retro_console.py`) lee los eventos del control directamente
+con la librería `evdev`, sin depender de drivers adicionales como xboxdrv.
+
 Primero hay que verificar que el sistema reconozca el control:
 
 ```bash
 lsusb
 ```
 
-Si aparece en la lista, podemos ejecutar xboxdrv estando dentro del
-directorio correspondiente; si da error, intentar con sudo.
-
-Si el control no aparece con ese comando, podemos ejecutar el siguiente:
+Si no aparece con ese comando, podemos listar los dispositivos de entrada:
 
 ```bash
 ls /dev/input/by-id/
 ```
 
-A partir de ahí identificamos nuestro control y copiamos el identificador que contenga 'event'.
-Posteriormente lo reemplazamos en el siguiente comando:
+Para confirmar qué códigos de botones y ejes manda el control (útil si es un
+modelo distinto al usado durante el desarrollo), se puede usar:
 
 ```bash
-sudo xboxdrv \
-    --evdev /dev/input/by-id/<REEMPLAZAR> \
-    --silent \
-    --detach-kernel-driver \
-    --deadzone 500 \
-    --mimic-xpad \
-    --evdev-absmap ABS_X=x1,ABS_Y=y1,ABS_RX=x2,ABS_RY=y2,ABS_Z=lt,ABS_RZ=rt,ABS_HAT0X=dpad_x,ABS_HAT0Y=dpad_y \
-    --evdev-keymap BTN_A=a,BTN_B=b,BTN_X=x,BTN_Y=y,BTN_TL=lb,BTN_TR=rb,BTN_THUMBL=tl,BTN_THUMBR=tr,BTN_MODE=guide,BTN_SELECT=back,BTN_START=start \
-    --axismap -Y1=Y1,-Y2=Y2
+evtest /dev/input/eventX
 ```
 
-Si funciona, el sistema indicará en qué event y js quedó disponible, pero
-será necesario mantener el proceso abierto: si cerramos la terminal o
-presionamos ctrl+c, es posible que se deshabilite. Para evitar esto,
-creamos el siguiente script de inicio en init.d.
+Si los códigos reportados no coinciden con los que espera `joystick_control()`
+en `retro_console.py` (cruceta = 544/545, botón B = 305, THUMBL = 317), hay que
+actualizarlos ahí según lo que muestre `evtest` para ese control.
 
-Primero creamos el archivo con:
+## Directorios que espera el programa
 
-```bash
-sudo nano /etc/init.d/xboxdrv-startup
-```
+Antes de ejecutar `retro_console.py`, deben existir estas rutas en la Raspberry Pi:
 
-Ahora copiamos lo siguiente al archivo:
-
-```bash
-#!/bin/sh
-### BEGIN INIT INFO
-# Provides:          xboxdrv
-# Required-Start:    $remote_fs $syslog
-# Required-Stop:     $remote_fs $syslog
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
-# Short-Description: Start xboxdrv on boot
-### END INIT INFO
-
-case "$1" in
-    start)
-        echo "Starting xboxdrv"
-        /usr/local/bin/xboxdrv \
-    	    --evdev /dev/input/by-id/<REEMPLAZAR> \
-            --silent \
-            --detach-kernel-driver \
-            --deadzone 500 \
-            --mimic-xpad \
-            --evdev-absmap ABS_X=x1,ABS_Y=y1,ABS_RX=x2,ABS_RY=y2,ABS_Z=lt,ABS_RZ=rt,ABS_HAT0X=dpad_x,ABS_HAT0Y=dpad_y \
-            --evdev-keymap BTN_A=a,BTN_B=b,BTN_X=x,BTN_Y=y,BTN_TL=lb,BTN_TR=rb,BTN_THUMBL=tl,BTN_THUMBR=tr,BTN_MODE=guide,BTN_SELECT=back,BTN_START=start \
-            --axismap -Y1=Y1,-Y2=Y2\
-		&
-        ;;
-    stop)
-        echo "Stopping xboxdrv"
-        killall xboxdrv
-        ;;
-    *)
-        echo "Usage: /etc/init.d/xboxdrv-startup {start|stop}"
-        exit 1
-        ;;
-esac
-
-exit 0
-```
-
-Verificamos dónde quedó instalado xboxdrv con el siguiente comando:
-
-```bash
-which xboxdrv
-```
-
-Copiamos la ruta y comprobamos que coincida con la que tenemos en el script;
-si no coincide, la reemplazamos y asignamos permisos:
-
-```bash
-sudo chmod +x /usr/local/bin/xboxdrv
-```
-
-Si todo está bien entonces podremos iniciar el servicio con:
-
-```bash
-sudo /etc/init.d/xboxdrv-startup start
-```
-
-Para detenerlo basta con poner: 
-
-```bash
-sudo /etc/init.d/xboxdrv-startup stop
-```
-
-Para probar que funcione el mapeo entonces se hace con:
-
-```bash
-evtest /dev/input/event9
-```
+- `~/retro-console/roms` — ahí se colocan las ROMs `.smc`/`.sfc`. El programa la
+  crea automáticamente si no existe, pero debe tener al menos una ROM para
+  poder probar la emulación.
+- `~/retro-console/icons` — debe contener `apagadoScale.png`, `restartScale.png`
+  e `instrucciones.png`, usados por la interfaz.
+- `~/snes9x-1.60/gtk/build/snes9x-gtk` — el binario de Snes9x compilado según
+  la sección anterior.
 
 # Configuración de la Raspberry Pi para acceso remoto
 

@@ -1,33 +1,18 @@
 #!/usr/bin/bash
 #
 
-function installxbox(){
-  echo -e "[!] Instalando dependencias para el driver del control Xbox 360"
+function install_python_deps(){
+  local repo_dir="$1"
+  echo -e "[!] Instalando dependencias de Python y la interfaz gráfica"
   sleep 2
-  cd ~/ 
   sudo apt-get install -y \
-   g++ \
-   libboost-dev \
-   scons \
-   pkg-config \
-   libusb-1.0-0-dev \
-   git-core \
-   libx11-dev \
-   libudev-dev \
-   x11proto-core-dev \
-   libdbus-glib-1-dev \
-   scons
-  
-  pip install evdev
-  pip install pyautogui
+   python3-tk \
+   python3-pip \
+   libudev-dev
 
-  echo -e "[!] Clonando el repositorio de xboxdrv"
-  sleep 2
-  git clone https://github.com/xboxdrv/xboxdrv
-  cd xboxdrv
-  scons
+  pip install -r "$repo_dir/requirements.txt"
 
-  echo -e "[+] Driver instalado correctamente"
+  echo -e "[+] Dependencias de Python instaladas correctamente"
 }
 
 function snes9x (){
@@ -37,6 +22,9 @@ function snes9x (){
   sudo apt install libsdl2-dev libgtkmm-3.0-dev libepoxy-dev meson alsa-oss portaudio19-dev libminizip-dev
   echo -e "[!] Descargando y compilando el emulador"
   sleep 2
+  # Snes9x se compila en el home del usuario; retro_console.py espera
+  # encontrar el binario en ~/snes9x-1.60/gtk/build/snes9x-gtk
+  cd ~/
   # Descarga el código fuente de snes9x
   wget https://github.com/snes9xgit/snes9x/archive/refs/tags/1.60.tar.gz
   # Descomprime el archivo descargado
@@ -55,7 +43,8 @@ function snes9x (){
 
 
 function main(){
-  installxbox
+  local repo_dir="$(pwd)"
+  install_python_deps "$repo_dir"
   snes9x
 }
 
