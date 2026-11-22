@@ -279,17 +279,23 @@ if MODO_DEV:
     app.bind("<Return>", lambda event: on_clic_izquierdo())
 
 #Configura el Monitor-Observer para detectar cambios en los dispositivos de hardware
-context = pyudev.Context()
-monitor = pyudev.Monitor.from_netlink(context)
-monitor.filter_by(subsystem="block", device_type="partition")
-observer = pyudev.MonitorObserver(monitor, check_dev_events, name='monitor-observer')
-observer.daemon = True #El MonitorObserver debe ser un hilo demonio
-observer.start()
+#En algunos entornos de prueba (p. ej. WSL sin soporte completo de netlink) esto
+#puede no estar disponible; en ese caso se avisa y se continúa sin detección de USB.
+try:
+    context = pyudev.Context()
+    monitor = pyudev.Monitor.from_netlink(context)
+    monitor.filter_by(subsystem="block", device_type="partition")
+    observer = pyudev.MonitorObserver(monitor, check_dev_events, name='monitor-observer')
+    observer.daemon = True #El MonitorObserver debe ser un hilo demonio
+    observer.start()
 
-#Inicia un hilo para la detección de dispositivos USB
-hilo_usb = threading.Thread(target=detectar_usb)
-hilo_usb.daemon = True #Es importante que este hilo sea demonio
-hilo_usb.start()
+    #Inicia un hilo para la detección de dispositivos USB
+    hilo_usb = threading.Thread(target=detectar_usb)
+    hilo_usb.daemon = True #Es importante que este hilo sea demonio
+    hilo_usb.start()
+except Exception as e:
+    print(f"[!] No se pudo iniciar la detección de USB en este entorno: {e}")
+    print("[!] El programa continúa sin la función de importación por USB.")
 
 # Inicia un hilo para el control mediante el joystick, solo si hay uno conectado
 if joystick:
