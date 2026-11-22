@@ -1,4 +1,4 @@
-# waybackgm
+# fsem-retro-console
 Implementación de emulación de videojuegos retro para Raspberry Pi 4.
 
 ## Instalación de dependencias
@@ -9,7 +9,7 @@ Finalmente, debido a la naturaleza de su configuración, las modificaciones en l
 
 ```bash
 git clone <URL-del-repositorio>
-cd waybackgm
+cd fsem-retro-console
 chmod +x autorun.sh
 ./autorun.sh
 ```
