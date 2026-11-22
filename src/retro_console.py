@@ -6,28 +6,24 @@ from tkinter import PhotoImage
 import subprocess as sp
 import time
 import threading
-import psutil
 import shutil
 import os
 import pyudev
 from evdev import InputDevice, ecodes
 import evdev
-import pyautogui
 import sys
 from PIL import Image, ImageTk
 
-global anchoVentana
-global altoVentana
-# Permite el movimiento rápido del cursor
-pyautogui.FAILSAFE = False
-
-# Directorio donde se almacenan y buscan las ROMs
-#directorio_actual = os.getcwd()
-directorio_actual = "/home/<usuario>/Documents/Pruebas"
+# Directorio donde se almacenan y buscan las ROMs (en la Raspberry Pi)
+directorio_actual = os.path.expanduser("~/retro-console/roms")
 directorio = directorio_actual
 usb = 0
 dispositivo = 0
-#directorio_usb = '/media/<usuario>/SAMSUNG USB'
+
+# Directorio de los iconos de la interfaz y ruta del binario de Snes9x,
+# instalados siguiendo las instrucciones de src/README.md
+directorio_iconos = os.path.expanduser("~/retro-console/icons")
+snes9x_bin = os.path.expanduser("~/snes9x-1.60/gtk/build/snes9x-gtk")
 
 
 # Busca el dispositivo de entrada del control
@@ -48,28 +44,33 @@ else:
 
 def ejecutar_snes9x(nombre_archivo):
     ruta_archivo = os.path.join(directorio, nombre_archivo)
-    #comando = f"/home/<usuario>/Documents/snes9x-1.60/gtk/build/snes9x-gtk {ruta_archivo}"
-    comando = f'/home/<usuario>/Documents/snes9x-1.60/gtk/build/snes9x-gtk "{ruta_archivo}"'  
-    sp.run(comando, shell=True)
+    sp.run([snes9x_bin, ruta_archivo])
 
 def cargar_archivos():
+    os.makedirs(directorio, exist_ok=True)
     return sorted([archivo for archivo in os.listdir(directorio) if (archivo.endswith('.smc') or archivo.endswith('.sfc'))])
 
 def on_tecla_arriba():
     selected_index = menu.curselection()
-    if selected_index:
-        new_index = selected_index[0] - 1
-        menu.selection_clear(0, tk.END)  # Limpiar la selección actual
-        menu.selection_set(new_index)    # Establecer nueva selección
-        menu.see(new_index)              # Hacer visible el nuevo ítem si está fuera de la vista
+    if not selected_index:
+        if menu.size() > 0:
+            menu.selection_set(0)
+        return
+    new_index = max(0, selected_index[0] - 1)
+    menu.selection_clear(0, tk.END)  # Limpiar la selección actual
+    menu.selection_set(new_index)    # Establecer nueva selección
+    menu.see(new_index)              # Hacer visible el nuevo ítem si está fuera de la vista
 
 def on_tecla_abajo():
     selected_index = menu.curselection()
-    if selected_index and selected_index[0] < menu.size() - 1:
-        new_index = selected_index[0] + 1
-        menu.selection_clear(0, tk.END)
-        menu.selection_set(new_index)
-        menu.see(new_index)
+    if not selected_index:
+        if menu.size() > 0:
+            menu.selection_set(0)
+        return
+    new_index = min(menu.size() - 1, selected_index[0] + 1)
+    menu.selection_clear(0, tk.END)
+    menu.selection_set(new_index)
+    menu.see(new_index)
 
 
 def on_seleccion(event):
@@ -95,64 +96,28 @@ def salir(event):
     sys.exit(0)
 
 def joystick_control():
-    # Lógica para controlar el menú con el stick izquierdo del control
-    #pyautogui.moveTo(-10,y)
-    y = 20
-    x = 0
-    global anchoVentana
-    global altoVentana
+    # Lee los eventos del control y navega el menú directamente,
+    # sin simular movimientos de mouse ni teclado.
     for event in joystick.read_loop():
-        if event.type == ecodes.EV_ABS and event.code == 17:
-            y += 20 if event.value == 1 else -20
-            print('cruz abajo' if event.value == 1 else 'cruz arriba')
-            pyautogui.moveTo(x, y)
-            print(pyautogui.position())
-        elif event.type == ecodes.EV_ABS and event.code == 16:
-            if event.value == 1:
-                x = max(1, x - 60)
-                print('cruz izquierda')
-            elif event.value == -1:
-                x = min(anchoVentana - 30, x + 60)
-                print('cruz derecha')
-            pyautogui.moveTo(x, y)
-            print(pyautogui.position())
+        if event.type == ecodes.EV_ABS and event.code == 17 and event.value != 0:
+            # Cruceta vertical (eje Y)
+            app.after(0, on_tecla_abajo if event.value == 1 else on_tecla_arriba)
         elif event.type == ecodes.EV_KEY and event.code == 545 and event.value == 1:
-            y += 20
-            print('cruz abajo')
-            pyautogui.moveTo(x, y)
-            print(pyautogui.position())
-        elif event.type == ecodes.EV_KEY and event.code == 311 and event.value == 1:
-            print('BOTON DERECHO/CLICK DERECHO')
-            pyautogui.rightClick()
-        elif event.type == ecodes.EV_KEY and event.code == 310 and event.value == 1:
-            print('BOTON IZQUIERDO/CLICK IZQUIERDO')
-            pyautogui.click()
+            # Cruceta abajo (como botón digital)
+            app.after(0, on_tecla_abajo)
         elif event.type == ecodes.EV_KEY and event.code == 544 and event.value == 1:
-            y -= 20
-            print('cruz arriba')
-            pyautogui.moveTo(x, y)
-            print(pyautogui.position())
-        elif event.type == ecodes.EV_KEY and event.code == 546 and event.value == 1:
-            x = max(1, x - 60)
-            print('cruz izquierda')
-            pyautogui.moveTo(x, y)
-            print(pyautogui.position())
-        elif event.type == ecodes.EV_KEY and event.code == 547 and event.value == 1:
-            x = min(anchoVentana - 30, x + 60)
-            print('cruz derecha')
-            pyautogui.moveTo(x, y)
-            print(pyautogui.position())
-        elif event.type == ecodes.EV_KEY and event.code == 316 and event.value == 1:
-            print('Botón XBOX presionado')
+            # Cruceta arriba (como botón digital)
+            app.after(0, on_tecla_arriba)
+        elif event.type == ecodes.EV_KEY and event.code == 305 and event.value == 1:
+            # Botón B: confirma la selección y lanza la ROM
+            app.after(0, on_clic_izquierdo)
+        elif event.type == ecodes.EV_KEY and event.code == 317 and event.value == 1:
+            # THUMBL: cierra la ventana de importación de USB, si hay una abierta
+            app.after(0, cerrar_ventana_usb_activa)
         elif event.type == ecodes.EV_KEY and event.code == 307 and event.value == 1:
             print('Botón X presionado')
-        elif event.type == ecodes.EV_KEY and event.code == 305 and event.value == 1:
-            print('Botón B presionado')
-        elif event.type == ecodes.EV_KEY and event.code == 317 and event.value == 1:
-            print('Se presiono THUMBL')
-            pyautogui.press('tab')
-
-                
+        elif event.type == ecodes.EV_KEY and event.code == 316 and event.value == 1:
+            print('Botón XBOX presionado')
 
 
 #Funciones necesarias para la detección de dispositivos USB
@@ -221,13 +186,6 @@ def mostrar_contenido_usb(ruta_dispositivo):
 
     ventanas[dispositivo] = ventana_usb
 
-    def cerrar_ventana(event):
-        ventanas.pop(dispositivo, None)
-        ventana_usb.destroy()
-        actualizar_lista_archivos()
-
-    ventana_usb.bind("<Tab>", cerrar_ventana)
-
     ventana_usb.update_idletasks()
     ancho_ventana = ventana_usb.winfo_width()
     alto_ventana = ventana_usb.winfo_height()
@@ -263,17 +221,22 @@ def actualizar_lista_archivos():
     for archivo in archivos:
         menu.insert(tk.END, archivo)
 
+def cerrar_ventana_usb_activa():
+    # Cierra cualquier ventana de importación de USB que esté abierta
+    for disp, ventana_usb in list(ventanas.items()):
+        ventana_usb.destroy()
+        ventanas.pop(disp, None)
+    actualizar_lista_archivos()
+
 ventanas = {}
 
 archivos = cargar_archivos()
 
 app = tk.Tk()
 app.attributes("-fullscreen", True)
-anchoVentana = app.winfo_screenwidth()
-altoVentana = app.winfo_screenheight()
 
-icono_apagar = PhotoImage(file="/home/<usuario>/Documents/Pruebas/icons/apagadoScale.png")  
-icono_reiniciar = PhotoImage(file="/home/<usuario>/Documents/Pruebas/icons/restartScale.png") 
+icono_apagar = PhotoImage(file=os.path.join(directorio_iconos, "apagadoScale.png"))
+icono_reiniciar = PhotoImage(file=os.path.join(directorio_iconos, "restartScale.png"))
 
 # Botón de apagar
 btn_apagar = tk.Button(app, text="Apagar", command=apagar, bg="red", fg="white", image=icono_apagar, compound="right")
@@ -285,7 +248,7 @@ btn_reiniciar.pack(side=tk.RIGHT, padx=10, pady=10)
 
 
 # Carga la imagen que se muestra debajo de los botones
-imagen_debajo = Image.open("/home/<usuario>/Documents/Pruebas/icons/instrucciones.png")  # Reemplazar con la ruta de la imagen
+imagen_debajo = Image.open(os.path.join(directorio_iconos, "instrucciones.png"))
 imagen_debajo = ImageTk.PhotoImage(imagen_debajo)
 
 # Coloca la imagen en la interfaz

@@ -1,5 +1,5 @@
-tkinter
+# tkinter se instala con el paquete del sistema, no con pip:
+#   sudo apt-get install python3-tk
 Pillow
 evdev
 pyudev
-pyautogui
