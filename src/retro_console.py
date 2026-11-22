@@ -25,6 +25,11 @@ dispositivo = 0
 directorio_iconos = os.path.expanduser("~/retro-console/icons")
 snes9x_bin = os.path.expanduser("~/snes9x-1.60/gtk/build/snes9x-gtk")
 
+# Se crean aquí, antes de la detección del control, para que existan
+# aunque el script termine por no encontrar un joystick.
+os.makedirs(directorio_actual, exist_ok=True)
+os.makedirs(directorio_iconos, exist_ok=True)
+
 # Modo de desarrollo: permite probar con teclado cuando no hay un control
 # conectado (p. ej. en WSL sin passthrough USB). NO se usa en la consola
 # final, que debe operarse únicamente con gamepad.
