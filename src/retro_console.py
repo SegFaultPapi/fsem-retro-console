@@ -25,6 +25,11 @@ dispositivo = 0
 directorio_iconos = os.path.expanduser("~/retro-console/icons")
 snes9x_bin = os.path.expanduser("~/snes9x-1.60/gtk/build/snes9x-gtk")
 
+# Modo de desarrollo: permite probar con teclado cuando no hay un control
+# conectado (p. ej. en WSL sin passthrough USB). NO se usa en la consola
+# final, que debe operarse únicamente con gamepad.
+MODO_DEV = os.environ.get("RETRO_CONSOLE_DEV") == "1"
+
 
 # Busca el dispositivo de entrada del control
 joystick = None
@@ -37,6 +42,8 @@ for device in [InputDevice(fn) for fn in evdev.list_devices()]:
 
 if joystick:
     print(f"Joystick detectado: {joystick.name}")
+elif MODO_DEV:
+    print("No se encontró un joystick. Modo de desarrollo activo: usando teclado (flechas + Enter).")
 else:
     print("No se encontró un joystick.")
     sys.exit(1)
@@ -265,24 +272,30 @@ for archivo in archivos:
 menu.bind("<ButtonRelease-1>", on_seleccion)
 app.bind("<Escape>", salir)
 
+if MODO_DEV:
+    # Navegación de respaldo con teclado, solo para pruebas sin control físico.
+    app.bind("<Up>", lambda event: on_tecla_arriba())
+    app.bind("<Down>", lambda event: on_tecla_abajo())
+    app.bind("<Return>", lambda event: on_clic_izquierdo())
+
 #Configura el Monitor-Observer para detectar cambios en los dispositivos de hardware
 context = pyudev.Context()
 monitor = pyudev.Monitor.from_netlink(context)
 monitor.filter_by(subsystem="block", device_type="partition")
 observer = pyudev.MonitorObserver(monitor, check_dev_events, name='monitor-observer')
-observer.daemon #El MonitorObserver debe ser un hilo demonio
+observer.daemon = True #El MonitorObserver debe ser un hilo demonio
 observer.start()
 
 #Inicia un hilo para la detección de dispositivos USB
 hilo_usb = threading.Thread(target=detectar_usb)
-hilo_usb.daemon #Es importante que este hilo sea demonio
+hilo_usb.daemon = True #Es importante que este hilo sea demonio
 hilo_usb.start()
 
-
-# Inicia un hilo para el control mediante el joystick
-hilo_joystick = threading.Thread(target=joystick_control)
-hilo_joystick.daemon
-hilo_joystick.start()
+# Inicia un hilo para el control mediante el joystick, solo si hay uno conectado
+if joystick:
+    hilo_joystick = threading.Thread(target=joystick_control)
+    hilo_joystick.daemon = True
+    hilo_joystick.start()
 
 
 app.mainloop()
