@@ -245,12 +245,11 @@ ventanas = {}
 archivos = cargar_archivos()
 
 app = tk.Tk()
-# Sin gestor de ventanas no hay quien atienda la petición de "-fullscreen",
-# así que se fuerza el tamaño de pantalla directamente y se quita el borde.
-ancho_pantalla = app.winfo_screenwidth()
-alto_pantalla = app.winfo_screenheight()
-app.overrideredirect(True)
-app.geometry(f"{ancho_pantalla}x{alto_pantalla}+0+0")
+# matchbox-window-manager (configurado en ~/.xinitrc) es quien maximiza y
+# le da el foco de teclado a esta ventana. "overrideredirect" NO debe usarse
+# aquí: le indica a cualquier gestor de ventanas que la ignore por completo,
+# lo cual impide que reciba el foco correctamente.
+app.attributes("-fullscreen", True)
 
 icono_apagar = PhotoImage(file=os.path.join(directorio_iconos, "apagadoScale.png"))
 icono_reiniciar = PhotoImage(file=os.path.join(directorio_iconos, "restartScale.png"))

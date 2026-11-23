@@ -78,11 +78,53 @@ function preparar_directorios(){
   echo -e "[+] Directorios listos en ~/retro-console"
 }
 
+function configurar_entorno_grafico(){
+  local repo_dir="$1"
+  echo -e "[!] Configurando el entorno gráfico mínimo (sin escritorio)"
+
+  # xserver-xorg-legacy + matchbox-window-manager: lo mínimo para mostrar
+  # una ventana a pantalla completa sin ningún escritorio ni gestor de
+  # ventanas superpuestas. matchbox solo maximiza y enfoca automáticamente
+  # cada ventana (necesario para que el teclado/control lleguen a la app
+  # que está al frente), no trae panel, iconos ni multitarea visual.
+  sudo apt-get install -y \
+   xserver-xorg \
+   xserver-xorg-legacy \
+   xinit \
+   x11-xserver-utils \
+   matchbox-window-manager
+
+  # En Raspberry Pi OS (Bookworm/Trixie) con autologin simple, Xorg no
+  # arranca por defecto porque no reconoce la sesión como gestionada por
+  # logind; esto le permite a cualquier usuario local iniciar Xorg.
+  sudo tee /etc/X11/Xwrapper.config > /dev/null <<'EOF'
+allowed_users=anybody
+needs_root_rights=yes
+EOF
+
+  # El usuario necesita pertenecer a estos grupos para que Xorg pueda
+  # abrir la terminal virtual (/dev/tty0) y los dispositivos de video.
+  sudo usermod -aG tty,video "$USER"
+
+  cat > ~/.xinitrc <<EOF
+#!/bin/sh
+export RETRO_CONSOLE_DEV=1
+matchbox-window-manager -use_titlebar no &
+exec python3 $repo_dir/src/retro_console.py
+EOF
+  chmod +x ~/.xinitrc
+
+  echo -e "[+] Entorno gráfico configurado. Puede que sea necesario cerrar sesión"
+  echo -e "    o reiniciar para que el cambio de grupos surta efecto."
+  echo -e "    Después, iniciar la interfaz con: startx"
+}
+
 function main(){
   local repo_dir="$(pwd)"
   install_python_deps
   snes9x
   preparar_directorios "$repo_dir"
+  configurar_entorno_grafico "$repo_dir"
 }
 
 
