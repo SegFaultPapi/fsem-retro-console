@@ -136,10 +136,11 @@ def restaurar_texto_instrucciones():
 
 def resaltar_seleccion():
     for i, tile in enumerate(tiles):
-        if i == indice_seleccionado[0]:
-            tile.configure(highlightbackground=COLOR_ACENTO, highlightcolor=COLOR_ACENTO)
-        else:
-            tile.configure(highlightbackground=COLOR_PANEL, highlightcolor=COLOR_PANEL)
+        seleccionado = (i == indice_seleccionado[0])
+        color_borde = COLOR_ACENTO if seleccionado else COLOR_PANEL
+        tile.configure(highlightbackground=color_borde, highlightcolor=color_borde)
+        if hasattr(tile, "lbl_titulo"):
+            tile.lbl_titulo.configure(fg=COLOR_ACENTO if seleccionado else COLOR_TEXTO)
 
 def indice_en_fila(fila, columna_objetivo):
     candidatos = [i for i, (f, _c) in enumerate(posiciones) if f == fila]
@@ -331,6 +332,45 @@ def copiar_archivos_smc(desde_usb, a_directorio=directorio):
         print(f"Error al copiar archivos: {e}")
 
 
+def dibujar_tarjeta_redondeada(canvas, ancho, alto, radio, color):
+    # Esquinas redondeadas sobre un Canvas, combinando rectángulos y arcos.
+    # El Canvas mide siempre lo mismo en píxeles sin importar si al final
+    # se dibuja una imagen real o el texto del placeholder encima.
+    canvas.create_rectangle(radio, 0, ancho - radio, alto, fill=color, outline=color)
+    canvas.create_rectangle(0, radio, ancho, alto - radio, fill=color, outline=color)
+    canvas.create_arc(0, 0, 2 * radio, 2 * radio, start=90, extent=90, fill=color, outline=color)
+    canvas.create_arc(ancho - 2 * radio, 0, ancho, 2 * radio, start=0, extent=90, fill=color, outline=color)
+    canvas.create_arc(0, alto - 2 * radio, 2 * radio, alto, start=180, extent=90, fill=color, outline=color)
+    canvas.create_arc(ancho - 2 * radio, alto - 2 * radio, ancho, alto, start=270, extent=90, fill=color, outline=color)
+
+def crear_canvas_portada(parent, archivo):
+    ancho_portada = ANCHO_TILE - 20
+    canvas = tk.Canvas(
+        parent, width=ancho_portada, height=ALTO_PORTADA,
+        bg=COLOR_PANEL, highlightthickness=0,
+    )
+
+    ruta_portada = buscar_portada(archivo)
+    imagen_cargada = False
+    if ruta_portada:
+        try:
+            imagen = Image.open(ruta_portada).convert("RGB").resize((ancho_portada, ALTO_PORTADA))
+            foto = ImageTk.PhotoImage(imagen)
+            imagenes_referencia.append(foto)
+            canvas.create_image(ancho_portada // 2, ALTO_PORTADA // 2, image=foto)
+            imagen_cargada = True
+        except Exception as e:
+            print(f"[!] No se pudo cargar la portada de {archivo}: {e}")
+
+    if not imagen_cargada:
+        dibujar_tarjeta_redondeada(canvas, ancho_portada, ALTO_PORTADA, 14, COLOR_BARRA)
+        canvas.create_text(
+            ancho_portada // 2, ALTO_PORTADA // 2, text=obtener_sistema(archivo),
+            fill=COLOR_ACENTO, font=("DejaVu Sans", 16, "bold"),
+        )
+
+    return canvas
+
 def crear_tile_juego(parent, archivo):
     tile = tk.Frame(
         parent, bg=COLOR_PANEL, width=ANCHO_TILE, height=ALTO_PORTADA + 70,
@@ -340,28 +380,14 @@ def crear_tile_juego(parent, archivo):
     tile.tipo_item = "rom"
     tile.archivo_item = archivo
 
-    ruta_portada = buscar_portada(archivo)
-    widget_portada = None
-    if ruta_portada:
-        try:
-            imagen = Image.open(ruta_portada).resize((ANCHO_TILE - 20, ALTO_PORTADA))
-            foto = ImageTk.PhotoImage(imagen)
-            imagenes_referencia.append(foto)
-            widget_portada = tk.Label(tile, image=foto, bg=COLOR_PANEL)
-        except Exception as e:
-            print(f"[!] No se pudo cargar la portada de {archivo}: {e}")
+    canvas_portada = crear_canvas_portada(tile, archivo)
+    canvas_portada.pack(padx=10, pady=(10, 6))
 
-    if widget_portada is None:
-        widget_portada = tk.Label(
-            tile, text=obtener_sistema(archivo), bg=COLOR_BARRA, fg=COLOR_ACENTO,
-            font=("DejaVu Sans", 16, "bold"), width=14, height=7,
-        )
-
-    widget_portada.pack(padx=10, pady=(10, 6))
-    tk.Label(
+    tile.lbl_titulo = tk.Label(
         tile, text=formatear_nombre_rom(archivo), bg=COLOR_PANEL, fg=COLOR_TEXTO,
         font=("DejaVu Sans", 11, "bold"), wraplength=ANCHO_TILE - 16, justify="center",
-    ).pack(padx=8, pady=(0, 8))
+    )
+    tile.lbl_titulo.pack(padx=8, pady=(0, 8))
 
     for widget in (tile, *tile.winfo_children()):
         widget.bind("<Button-1>", lambda event, t=tile: seleccionar_tile_por_click(t))
@@ -395,6 +421,7 @@ def crear_boton_accion(parent, accion, etiqueta, icono, color_texto):
     return boton
 
 def construir_grid():
+    label_galeria.config(text=f"GALERÍA DE JUEGOS ({len(archivos_actuales)})")
     for widget in contenedor_grid.winfo_children():
         widget.destroy()
     for widget in contenedor_acciones.winfo_children():
@@ -531,10 +558,11 @@ cuerpo.pack(side="top", fill="both", expand=True)
 zona_galeria = tk.Frame(cuerpo, bg=COLOR_FONDO)
 zona_galeria.pack(fill="both", expand=True)
 
-tk.Label(
+label_galeria = tk.Label(
     zona_galeria, text="GALERÍA DE JUEGOS", bg=COLOR_FONDO, fg=COLOR_TEXTO_TENUE,
     font=("DejaVu Sans", 11, "bold"), anchor="w",
-).pack(fill="x", padx=24, pady=(18, 4))
+)
+label_galeria.pack(fill="x", padx=24, pady=(18, 4))
 
 # "expand=True" sin "fill" centra el contenido en el espacio disponible
 # (horizontal y vertical), en vez de quedar pegado arriba a la izquierda.
