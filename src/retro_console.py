@@ -8,6 +8,7 @@ import time
 import threading
 import shutil
 import os
+import math
 import pyudev
 from evdev import InputDevice, ecodes
 import evdev
@@ -144,6 +145,28 @@ def resaltar_seleccion():
             tile.barra_seleccion.configure(bg=color)
         if hasattr(tile, "lbl_titulo"):
             tile.lbl_titulo.configure(fg=COLOR_ACENTO if seleccionado else COLOR_TEXTO)
+
+# --- Animación de "pulso" en la barra de la tarjeta seleccionada ---
+# Solo cambia un color cada cierto intervalo: no toca ningún tamaño, así
+# que no puede reintroducir el temblor que ya se arregló.
+# (COLOR_PANEL_RGB/COLOR_ACENTO_RGB se calculan más abajo, una vez que
+# existen COLOR_PANEL/COLOR_ACENTO; esta función solo los usa en tiempo
+# de ejecución, no al definirse.)
+_fase_pulso = [0.0]
+
+def _interpolar_color(c1, c2, t):
+    return '#%02x%02x%02x' % tuple(int(c1[i] + (c2[i] - c1[i]) * t) for i in range(3))
+
+def animar_pulso():
+    _fase_pulso[0] = (_fase_pulso[0] + 0.18) % (2 * math.pi)
+    intensidad = 0.55 + 0.45 * ((math.sin(_fase_pulso[0]) + 1) / 2)
+    if tiles:
+        tile_actual = tiles[indice_seleccionado[0]]
+        if hasattr(tile_actual, "barra_seleccion"):
+            tile_actual.barra_seleccion.configure(
+                bg=_interpolar_color(COLOR_PANEL_RGB, COLOR_ACENTO_RGB, intensidad)
+            )
+    app.after(90, animar_pulso)
 
 def indice_en_fila(fila, columna_objetivo):
     candidatos = [i for i, (f, _c) in enumerate(posiciones) if f == fila]
@@ -335,40 +358,49 @@ def copiar_archivos_smc(desde_usb, a_directorio=directorio):
         print(f"Error al copiar archivos: {e}")
 
 
-def dibujar_tarjeta_redondeada(canvas, ancho, alto, radio, color):
+def dibujar_tarjeta_redondeada(canvas, ancho, alto, radio, color, ox=0, oy=0):
     # Esquinas redondeadas sobre un Canvas, combinando rectángulos y arcos.
     # El Canvas mide siempre lo mismo en píxeles sin importar si al final
     # se dibuja una imagen real o el texto del placeholder encima.
-    canvas.create_rectangle(radio, 0, ancho - radio, alto, fill=color, outline=color)
-    canvas.create_rectangle(0, radio, ancho, alto - radio, fill=color, outline=color)
-    canvas.create_arc(0, 0, 2 * radio, 2 * radio, start=90, extent=90, fill=color, outline=color)
-    canvas.create_arc(ancho - 2 * radio, 0, ancho, 2 * radio, start=0, extent=90, fill=color, outline=color)
-    canvas.create_arc(0, alto - 2 * radio, 2 * radio, alto, start=180, extent=90, fill=color, outline=color)
-    canvas.create_arc(ancho - 2 * radio, alto - 2 * radio, ancho, alto, start=270, extent=90, fill=color, outline=color)
+    # (ox, oy) desplaza todo el dibujo, para poder usarlo también como sombra.
+    canvas.create_rectangle(ox + radio, oy, ox + ancho - radio, oy + alto, fill=color, outline=color)
+    canvas.create_rectangle(ox, oy + radio, ox + ancho, oy + alto - radio, fill=color, outline=color)
+    canvas.create_arc(ox, oy, ox + 2 * radio, oy + 2 * radio, start=90, extent=90, fill=color, outline=color)
+    canvas.create_arc(ox + ancho - 2 * radio, oy, ox + ancho, oy + 2 * radio, start=0, extent=90, fill=color, outline=color)
+    canvas.create_arc(ox, oy + alto - 2 * radio, ox + 2 * radio, oy + alto, start=180, extent=90, fill=color, outline=color)
+    canvas.create_arc(ox + ancho - 2 * radio, oy + alto - 2 * radio, ox + ancho, oy + alto, start=270, extent=90, fill=color, outline=color)
+
+MARGEN_SOMBRA = 6
+COLOR_SOMBRA = "#05060a"
 
 def crear_canvas_portada(parent, archivo):
-    ancho_portada = ANCHO_TILE - 20
+    ancho_portada = ANCHO_TILE - 20 - MARGEN_SOMBRA
+    alto_portada = ALTO_PORTADA - MARGEN_SOMBRA
     canvas = tk.Canvas(
-        parent, width=ancho_portada, height=ALTO_PORTADA,
+        parent, width=ancho_portada + MARGEN_SOMBRA, height=alto_portada + MARGEN_SOMBRA,
         bg=COLOR_PANEL, highlightthickness=0,
     )
+
+    # Sombra: una copia oscura desfasada detrás de la tarjeta, para dar
+    # sensación de profundidad (se asoma por abajo/derecha).
+    dibujar_tarjeta_redondeada(canvas, ancho_portada, alto_portada, 12, COLOR_SOMBRA, ox=MARGEN_SOMBRA, oy=MARGEN_SOMBRA)
 
     ruta_portada = buscar_portada(archivo)
     imagen_cargada = False
     if ruta_portada:
         try:
-            imagen = Image.open(ruta_portada).convert("RGB").resize((ancho_portada, ALTO_PORTADA))
+            imagen = Image.open(ruta_portada).convert("RGB").resize((ancho_portada, alto_portada))
             foto = ImageTk.PhotoImage(imagen)
             imagenes_referencia.append(foto)
-            canvas.create_image(ancho_portada // 2, ALTO_PORTADA // 2, image=foto)
+            canvas.create_image(ancho_portada // 2, alto_portada // 2, image=foto)
             imagen_cargada = True
         except Exception as e:
             print(f"[!] No se pudo cargar la portada de {archivo}: {e}")
 
     if not imagen_cargada:
-        dibujar_tarjeta_redondeada(canvas, ancho_portada, ALTO_PORTADA, 14, COLOR_BARRA)
+        dibujar_tarjeta_redondeada(canvas, ancho_portada, alto_portada, 14, COLOR_BARRA)
         canvas.create_text(
-            ancho_portada // 2, ALTO_PORTADA // 2, text=obtener_sistema(archivo),
+            ancho_portada // 2, alto_portada // 2, text=obtener_sistema(archivo),
             fill=COLOR_ACENTO, font=("DejaVu Sans", 16, "bold"),
         )
 
@@ -497,6 +529,10 @@ COLOR_TEXTO = "#e7e9f0"
 COLOR_TEXTO_TENUE = "#8c91a8"
 COLOR_ACENTO = "#3ddc97"
 COLOR_ACENTO_TEXTO = "#0b1410"
+
+# Usados por la animación de pulso de la barra de selección (ver animar_pulso).
+COLOR_PANEL_RGB = tuple(int(COLOR_PANEL[i:i + 2], 16) for i in (1, 3, 5))
+COLOR_ACENTO_RGB = tuple(int(COLOR_ACENTO[i:i + 2], 16) for i in (1, 3, 5))
 
 app = tk.Tk()
 # matchbox-window-manager (configurado en ~/.xinitrc) es quien maximiza y
@@ -635,5 +671,6 @@ if joystick:
     hilo_joystick.daemon = True
     hilo_joystick.start()
 
+animar_pulso()
 
 app.mainloop()
