@@ -117,18 +117,29 @@ def on_tecla_abajo():
     actualizar_panel_detalle()
 
 
+def obtener_archivo_en_indice(indice):
+    # La lista muestra el nombre formateado, no el nombre real del archivo;
+    # archivos_actuales guarda el nombre real en el mismo orden mostrado.
+    if 0 <= indice < len(archivos_actuales):
+        return archivos_actuales[indice]
+    return None
+
 def on_seleccion(event):
-    widget = event.widget
-    seleccionado = widget.get(widget.curselection())
+    seleccion = menu.curselection()
+    if not seleccion:
+        return
     actualizar_panel_detalle()
-    ejecutar_snes9x(seleccionado)
+    seleccionado = obtener_archivo_en_indice(seleccion[0])
+    if seleccionado:
+        ejecutar_snes9x(seleccionado)
 
 
 def on_clic_izquierdo():
     selected_index = menu.curselection()
     if selected_index:
-        seleccionado = menu.get(selected_index[0])
-        ejecutar_snes9x(seleccionado)
+        seleccionado = obtener_archivo_en_indice(selected_index[0])
+        if seleccionado:
+            ejecutar_snes9x(seleccionado)
 
 def apagar():
     os.system("shutdown now")
@@ -262,25 +273,31 @@ def copiar_archivos_smc(desde_usb, a_directorio=directorio):
 def actualizar_panel_detalle():
     # Refleja en el panel derecho la ROM actualmente seleccionada en la lista.
     seleccion = menu.curselection()
-    if not seleccion:
+    nombre_archivo = obtener_archivo_en_indice(seleccion[0]) if seleccion else None
+    if not nombre_archivo:
         label_detalle_titulo.config(text="Selecciona un juego")
         label_detalle_sistema.config(text="")
         label_cover.config(text="")
         return
 
-    nombre_archivo = menu.get(seleccion[0])
     label_detalle_titulo.config(text=formatear_nombre_rom(nombre_archivo))
     sistema = obtener_sistema(nombre_archivo)
     label_detalle_sistema.config(text=sistema)
     label_cover.config(text=sistema)
 
-def actualizar_lista_archivos():
+def llenar_lista(archivos):
+    # Mantiene archivos_actuales[i] y el renglón i de la lista sincronizados:
+    # en pantalla se muestra el nombre formateado, pero las acciones siempre
+    # usan el nombre real del archivo.
+    archivos_actuales.clear()
     menu.delete(0, tk.END)
-    archivos = cargar_archivos()
-
     for archivo in archivos:
-        menu.insert(tk.END, archivo)
+        archivos_actuales.append(archivo)
+        menu.insert(tk.END, f"▸  {formatear_nombre_rom(archivo)}")
 
+def actualizar_lista_archivos():
+    archivos = cargar_archivos()
+    llenar_lista(archivos)
     if archivos:
         menu.selection_set(0)
     actualizar_panel_detalle()
@@ -293,6 +310,7 @@ def cerrar_ventana_usb_activa():
     actualizar_lista_archivos()
 
 ventanas = {}
+archivos_actuales = []
 
 archivos = cargar_archivos()
 
@@ -351,7 +369,11 @@ tk.Label(
     font=("DejaVu Sans", 12), padx=8,
 ).pack(side="left")
 
+# Línea de acento bajo el encabezado, para separar visualmente del cuerpo.
+tk.Frame(app, bg=COLOR_ACENTO, height=2).pack(side="top", fill="x")
+
 # --- Pie de página: instrucciones + botones de apagar/reiniciar ---
+tk.Frame(app, bg=COLOR_BARRA, height=1).pack(side="bottom", fill="x")
 barra_pie = tk.Frame(app, bg=COLOR_BARRA, height=60)
 barra_pie.pack(side="bottom", fill="x")
 
@@ -385,45 +407,52 @@ cuerpo = tk.Frame(app, bg=COLOR_FONDO)
 cuerpo.pack(side="top", fill="both", expand=True)
 
 panel_lista = tk.Frame(cuerpo, bg=COLOR_FONDO)
-panel_lista.pack(side="left", fill="both", expand=True, padx=(24, 12), pady=18)
+panel_lista.pack(side="left", fill="both", expand=True, padx=(24, 12), pady=20)
 
 tk.Label(
     panel_lista, text="ROMS DISPONIBLES", bg=COLOR_FONDO, fg=COLOR_TEXTO_TENUE,
     font=("DejaVu Sans", 11, "bold"), anchor="w",
-).pack(fill="x", pady=(0, 8))
+).pack(fill="x", pady=(0, 10))
+
+marco_lista = tk.Frame(panel_lista, bg=COLOR_PANEL)
+marco_lista.pack(fill="both", expand=True)
 
 menu = tk.Listbox(
-    panel_lista, bg=COLOR_PANEL, fg=COLOR_TEXTO,
+    marco_lista, bg=COLOR_PANEL, fg=COLOR_TEXTO,
     selectbackground=COLOR_ACENTO, selectforeground=COLOR_ACENTO_TEXTO,
     activestyle="none", bd=0, highlightthickness=0,
-    font=("DejaVu Sans", 16), height=12,
+    font=("DejaVu Sans", 17), height=12,
 )
-menu.pack(fill="both", expand=True)
+menu.pack(fill="both", expand=True, padx=14, pady=14)
 
 panel_detalle = tk.Frame(cuerpo, bg=COLOR_PANEL, width=320)
-panel_detalle.pack(side="right", fill="y", padx=(12, 24), pady=18)
+panel_detalle.pack(side="right", fill="y", padx=(12, 24), pady=20)
 panel_detalle.pack_propagate(False)
 
+# Tarjeta de "portada": un marco de color acento que actúa como borde,
+# con la caja oscura adentro mostrando el sistema del juego seleccionado.
+marco_cover = tk.Frame(panel_detalle, bg=COLOR_ACENTO)
+marco_cover.pack(padx=24, pady=(32, 20))
+
 label_cover = tk.Label(
-    panel_detalle, text="", bg=COLOR_BARRA, fg=COLOR_ACENTO,
-    font=("DejaVu Sans", 28, "bold"), width=12, height=6,
+    marco_cover, text="", bg=COLOR_BARRA, fg=COLOR_ACENTO,
+    font=("DejaVu Sans", 26, "bold"), width=12, height=6,
 )
-label_cover.pack(padx=20, pady=(28, 20))
+label_cover.pack(padx=3, pady=3)
 
 label_detalle_titulo = tk.Label(
     panel_detalle, text="Selecciona un juego", bg=COLOR_PANEL, fg=COLOR_TEXTO,
-    font=("DejaVu Sans", 16, "bold"), wraplength=260, justify="center",
+    font=("DejaVu Sans", 17, "bold"), wraplength=260, justify="center",
 )
 label_detalle_titulo.pack(padx=16)
 
 label_detalle_sistema = tk.Label(
-    panel_detalle, text="", bg=COLOR_PANEL, fg=COLOR_TEXTO_TENUE,
-    font=("DejaVu Sans", 12),
+    panel_detalle, text="", bg=COLOR_PANEL, fg=COLOR_ACENTO,
+    font=("DejaVu Sans", 12, "bold"),
 )
-label_detalle_sistema.pack(pady=(4, 0))
+label_detalle_sistema.pack(pady=(6, 0))
 
-for archivo in archivos:
-    menu.insert(tk.END, archivo)
+llenar_lista(archivos)
 
 if archivos:
     menu.selection_set(0)
