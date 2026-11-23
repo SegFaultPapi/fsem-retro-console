@@ -125,9 +125,6 @@ def salir(event):
 # Cada tile tiene una posición lógica (fila, columna) en "posiciones", en el
 # mismo orden que "tiles". No depende de cómo se vean agrupados visualmente.
 
-GROSOR_BORDE = 3  # constante a propósito: cambiarlo entre estados hace que
-                   # el widget cambie de tamaño y toda la fila/columna "salte".
-
 def indice_de_tile(tile):
     return tiles.index(tile)
 
@@ -135,10 +132,16 @@ def restaurar_texto_instrucciones():
     label_instrucciones.config(text=texto_instrucciones, fg=COLOR_TEXTO_TENUE)
 
 def resaltar_seleccion():
+    # La selección se marca con una barrita de acento de altura FIJA (nunca
+    # cambia de grosor, solo de color) y el color del título. Antes se usaba
+    # el borde del widget (highlightbackground), pero un borde que aparece y
+    # desaparece junto a tarjetas muy pegadas entre sí se percibe como que
+    # "se mueven", aunque el tamaño real no cambiara.
     for i, tile in enumerate(tiles):
         seleccionado = (i == indice_seleccionado[0])
-        color_borde = COLOR_ACENTO if seleccionado else COLOR_PANEL
-        tile.configure(highlightbackground=color_borde, highlightcolor=color_borde)
+        color = COLOR_ACENTO if seleccionado else COLOR_PANEL
+        if hasattr(tile, "barra_seleccion"):
+            tile.barra_seleccion.configure(bg=color)
         if hasattr(tile, "lbl_titulo"):
             tile.lbl_titulo.configure(fg=COLOR_ACENTO if seleccionado else COLOR_TEXTO)
 
@@ -373,21 +376,26 @@ def crear_canvas_portada(parent, archivo):
 
 def crear_tile_juego(parent, archivo):
     tile = tk.Frame(
-        parent, bg=COLOR_PANEL, width=ANCHO_TILE, height=ALTO_PORTADA + 70,
-        highlightthickness=GROSOR_BORDE, highlightbackground=COLOR_PANEL,
+        parent, bg=COLOR_PANEL, width=ANCHO_TILE, height=ALTO_PORTADA + 74,
+        highlightthickness=0,
     )
     tile.grid_propagate(False)
     tile.tipo_item = "rom"
     tile.archivo_item = archivo
 
     canvas_portada = crear_canvas_portada(tile, archivo)
-    canvas_portada.pack(padx=10, pady=(10, 6))
+    canvas_portada.pack(padx=10, pady=(10, 8))
+
+    # Barrita de acento: SIEMPRE mide lo mismo (altura fija), solo cambia de
+    # color al seleccionar. Es el indicador de selección en vez de un borde.
+    tile.barra_seleccion = tk.Frame(tile, bg=COLOR_PANEL, height=4)
+    tile.barra_seleccion.pack(fill="x", padx=18)
 
     tile.lbl_titulo = tk.Label(
         tile, text=formatear_nombre_rom(archivo), bg=COLOR_PANEL, fg=COLOR_TEXTO,
         font=("DejaVu Sans", 11, "bold"), wraplength=ANCHO_TILE - 16, justify="center",
     )
-    tile.lbl_titulo.pack(padx=8, pady=(0, 8))
+    tile.lbl_titulo.pack(padx=8, pady=(6, 8))
 
     for widget in (tile, *tile.winfo_children()):
         widget.bind("<Button-1>", lambda event, t=tile: seleccionar_tile_por_click(t))
@@ -399,21 +407,24 @@ def crear_boton_accion(parent, accion, etiqueta, icono, color_texto):
     # Apagar/Reiniciar se lean como acciones del sistema y no como más
     # juegos de la galería.
     boton = tk.Frame(
-        parent, bg=COLOR_PANEL, width=190, height=56,
-        highlightthickness=GROSOR_BORDE, highlightbackground=COLOR_PANEL,
+        parent, bg=COLOR_PANEL, width=190, height=60,
+        highlightthickness=0,
     )
     boton.grid_propagate(False)
     boton.tipo_item = "accion"
     boton.accion_item = accion
 
     contenido = tk.Frame(boton, bg=COLOR_PANEL)
-    contenido.place(relx=0.5, rely=0.5, anchor="center")
+    contenido.place(relx=0.5, rely=0.42, anchor="center")
 
     tk.Label(contenido, image=icono, bg=COLOR_PANEL).pack(side="left", padx=(0, 10))
     tk.Label(
         contenido, text=etiqueta, bg=COLOR_PANEL, fg=color_texto,
         font=("DejaVu Sans", 13, "bold"),
     ).pack(side="left")
+
+    boton.barra_seleccion = tk.Frame(boton, bg=COLOR_PANEL, height=4)
+    boton.barra_seleccion.place(relx=0.5, rely=1.0, anchor="s", relwidth=0.8, y=-4)
 
     for widget in (boton, contenido, *contenido.winfo_children()):
         widget.bind("<Button-1>", lambda event, t=boton: seleccionar_tile_por_click(t))
@@ -433,7 +444,7 @@ def construir_grid():
     for i, archivo in enumerate(archivos_actuales):
         tile = crear_tile_juego(contenedor_grid, archivo)
         fila, columna = divmod(i, COLUMNAS_GRID)
-        tile.grid(row=fila, column=columna, padx=14, pady=14, sticky="n")
+        tile.grid(row=fila, column=columna, padx=18, pady=18, sticky="n")
         tiles.append(tile)
         posiciones.append((fila, columna))
 
