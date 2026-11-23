@@ -56,7 +56,17 @@ else:
 
 def ejecutar_snes9x(nombre_archivo):
     ruta_archivo = os.path.join(directorio, nombre_archivo)
-    sp.run([snes9x_bin, ruta_archivo])
+    # Avisa que se está lanzando el juego: la interfaz se congela mientras
+    # Snes9x corre (sp.run es bloqueante), así que sin esto parecería
+    # que el programa no respondió al presionar la tecla/botón.
+    texto_previo = label_instrucciones.cget("text")
+    color_previo = label_instrucciones.cget("fg")
+    label_instrucciones.config(text=f"Cargando {formatear_nombre_rom(nombre_archivo)}...", fg=COLOR_ACENTO)
+    app.update_idletasks()
+    try:
+        sp.run([snes9x_bin, ruta_archivo])
+    finally:
+        label_instrucciones.config(text=texto_previo, fg=color_previo)
 
 def cargar_archivos():
     os.makedirs(directorio, exist_ok=True)
@@ -315,6 +325,31 @@ tk.Label(
     barra_encabezado, text="FSEM RETRO CONSOLE", bg=COLOR_BARRA, fg=COLOR_ACENTO,
     font=("DejaVu Sans", 22, "bold"), padx=24,
 ).pack(side="left", pady=10)
+
+# Indicador de estado del control: útil para saber de un vistazo si el
+# sistema detectó el gamepad, sin tener que mirar la terminal.
+if joystick:
+    texto_estado_control = "Control conectado"
+    color_estado_control = COLOR_ACENTO
+elif MODO_DEV:
+    texto_estado_control = "Modo teclado (dev)"
+    color_estado_control = "#e8c35c"
+else:
+    texto_estado_control = "Sin control"
+    color_estado_control = "#ff6b6b"
+
+frame_estado_control = tk.Frame(barra_encabezado, bg=COLOR_BARRA)
+frame_estado_control.pack(side="right", padx=24)
+
+tk.Label(
+    frame_estado_control, text="●", bg=COLOR_BARRA, fg=color_estado_control,
+    font=("DejaVu Sans", 14),
+).pack(side="left")
+
+tk.Label(
+    frame_estado_control, text=texto_estado_control, bg=COLOR_BARRA, fg=COLOR_TEXTO_TENUE,
+    font=("DejaVu Sans", 12), padx=8,
+).pack(side="left")
 
 # --- Pie de página: instrucciones + botones de apagar/reiniciar ---
 barra_pie = tk.Frame(app, bg=COLOR_BARRA, height=60)
