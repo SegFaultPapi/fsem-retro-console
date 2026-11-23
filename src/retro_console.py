@@ -245,7 +245,12 @@ ventanas = {}
 archivos = cargar_archivos()
 
 app = tk.Tk()
-app.attributes("-fullscreen", True)
+# Sin gestor de ventanas no hay quien atienda la petición de "-fullscreen",
+# así que se fuerza el tamaño de pantalla directamente y se quita el borde.
+ancho_pantalla = app.winfo_screenwidth()
+alto_pantalla = app.winfo_screenheight()
+app.overrideredirect(True)
+app.geometry(f"{ancho_pantalla}x{alto_pantalla}+0+0")
 
 icono_apagar = PhotoImage(file=os.path.join(directorio_iconos, "apagadoScale.png"))
 icono_reiniciar = PhotoImage(file=os.path.join(directorio_iconos, "restartScale.png"))
@@ -282,6 +287,11 @@ app.bind("<Escape>", salir)
 # la Raspberry Pi por accidente.
 btn_apagar.configure(takefocus=0)
 btn_reiniciar.configure(takefocus=0)
+
+# Sin gestor de ventanas, X no le asigna el foco de entrada a la ventana
+# por sí solo: hay que pedirlo explícitamente, o el teclado no llega a nadie.
+app.lift()
+app.focus_force()
 menu.focus_set()
 
 if MODO_DEV:
