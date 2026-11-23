@@ -277,6 +277,13 @@ for archivo in archivos:
 menu.bind("<ButtonRelease-1>", on_seleccion)
 app.bind("<Escape>", salir)
 
+# Los botones de apagar/reiniciar nunca deben recibir el foco de teclado:
+# así Enter en la lista solo puede lanzar una ROM, nunca apagar/reiniciar
+# la Raspberry Pi por accidente.
+btn_apagar.configure(takefocus=0)
+btn_reiniciar.configure(takefocus=0)
+menu.focus_set()
+
 if MODO_DEV:
     # Navegación de respaldo con teclado, solo para pruebas sin control físico.
     app.bind("<Up>", lambda event: on_tecla_arriba())

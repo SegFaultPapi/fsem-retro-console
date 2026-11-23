@@ -1,5 +1,9 @@
-# tkinter se instala con el paquete del sistema, no con pip:
-#   sudo apt-get install python3-tk
+# En Raspberry Pi OS (Bookworm/Trixie), "pip install" directo falla por la
+# protección externally-managed-environment (PEP 668). Por eso autorun.sh
+# instala estas dependencias como paquetes de Debian, no con pip:
+#   sudo apt-get install python3-tk python3-pil python3-evdev python3-pyudev
+#
+# Este archivo queda como referencia de los paquetes equivalentes en PyPI.
 Pillow
 evdev
 pyudev

@@ -2,15 +2,18 @@
 #
 
 function install_python_deps(){
-  local repo_dir="$1"
   echo -e "[!] Instalando dependencias de Python y la interfaz gráfica"
   sleep 2
+  # Se instalan como paquetes de Debian en vez de con pip: en Raspberry Pi OS
+  # (Bookworm/Trixie) "pip install" sin más falla por la protección
+  # externally-managed-environment (PEP 668), y estos paquetes ya están
+  # empaquetados para apt.
   sudo apt-get install -y \
    python3-tk \
-   python3-pip \
-   libudev-dev
-
-  pip install -r "$repo_dir/requirements.txt"
+   python3-pil \
+   python3-pil.imagetk \
+   python3-evdev \
+   python3-pyudev
 
   echo -e "[+] Dependencias de Python instaladas correctamente"
 }
@@ -54,7 +57,7 @@ function preparar_directorios(){
 
 function main(){
   local repo_dir="$(pwd)"
-  install_python_deps "$repo_dir"
+  install_python_deps
   snes9x
   preparar_directorios "$repo_dir"
 }

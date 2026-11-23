@@ -34,8 +34,8 @@ chmod +x autorun.sh
 ./autorun.sh
 ```
 
-Este script instala `python3-tk`, las dependencias de Python declaradas en
-`requirements.txt`, y compila el emulador Snes9x en
+Este script instala `python3-tk` y las dependencias de Python (`Pillow`, `evdev`,
+`pyudev`) como paquetes de Debian vía `apt`, y compila el emulador Snes9x en
 `~/snes9x-1.60/gtk/build/snes9x-gtk`.
 
 ### 3. Instalar un servidor X mínimo
