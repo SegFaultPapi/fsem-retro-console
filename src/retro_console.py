@@ -62,32 +62,55 @@ def cargar_archivos():
     os.makedirs(directorio, exist_ok=True)
     return sorted([archivo for archivo in os.listdir(directorio) if (archivo.endswith('.smc') or archivo.endswith('.sfc'))])
 
+# Extensión de archivo -> nombre de consola que se muestra en el panel de detalle.
+SISTEMAS_POR_EXTENSION = {
+    '.smc': 'SNES',
+    '.sfc': 'SNES',
+}
+
+def formatear_nombre_rom(nombre_archivo):
+    # Convierte "Rastan-SA1.sfc" en "Rastan SA1": quita la extensión y separa
+    # palabras por "-"/"_", dejando en mayúsculas los acrónimos cortos.
+    base = os.path.splitext(nombre_archivo)[0]
+    palabras = base.replace('_', ' ').replace('-', ' ').split()
+    formateadas = [p if (p.isupper() and len(p) <= 4) else p.capitalize() for p in palabras]
+    return ' '.join(formateadas) if formateadas else base
+
+def obtener_sistema(nombre_archivo):
+    extension = os.path.splitext(nombre_archivo)[1].lower()
+    return SISTEMAS_POR_EXTENSION.get(extension, '???')
+
 def on_tecla_arriba():
     selected_index = menu.curselection()
     if not selected_index:
         if menu.size() > 0:
             menu.selection_set(0)
+            actualizar_panel_detalle()
         return
     new_index = max(0, selected_index[0] - 1)
     menu.selection_clear(0, tk.END)  # Limpiar la selección actual
     menu.selection_set(new_index)    # Establecer nueva selección
     menu.see(new_index)              # Hacer visible el nuevo ítem si está fuera de la vista
+    actualizar_panel_detalle()
 
 def on_tecla_abajo():
     selected_index = menu.curselection()
     if not selected_index:
         if menu.size() > 0:
             menu.selection_set(0)
+            actualizar_panel_detalle()
         return
     new_index = min(menu.size() - 1, selected_index[0] + 1)
     menu.selection_clear(0, tk.END)
     menu.selection_set(new_index)
     menu.see(new_index)
+    actualizar_panel_detalle()
 
 
 def on_seleccion(event):
     widget = event.widget
     seleccionado = widget.get(widget.curselection())
+    actualizar_panel_detalle()
     ejecutar_snes9x(seleccionado)
 
 
@@ -226,12 +249,31 @@ def copiar_archivos_smc(desde_usb, a_directorio=directorio):
     except Exception as e:
         print(f"Error al copiar archivos: {e}")
 
+def actualizar_panel_detalle():
+    # Refleja en el panel derecho la ROM actualmente seleccionada en la lista.
+    seleccion = menu.curselection()
+    if not seleccion:
+        label_detalle_titulo.config(text="Selecciona un juego")
+        label_detalle_sistema.config(text="")
+        label_cover.config(text="")
+        return
+
+    nombre_archivo = menu.get(seleccion[0])
+    label_detalle_titulo.config(text=formatear_nombre_rom(nombre_archivo))
+    sistema = obtener_sistema(nombre_archivo)
+    label_detalle_sistema.config(text=sistema)
+    label_cover.config(text=sistema)
+
 def actualizar_lista_archivos():
     menu.delete(0, tk.END)
     archivos = cargar_archivos()
 
     for archivo in archivos:
         menu.insert(tk.END, archivo)
+
+    if archivos:
+        menu.selection_set(0)
+    actualizar_panel_detalle()
 
 def cerrar_ventana_usb_activa():
     # Cierra cualquier ventana de importación de USB que esté abierta
@@ -244,39 +286,113 @@ ventanas = {}
 
 archivos = cargar_archivos()
 
+# Paleta de la interfaz: tema oscuro tipo consola, con un acento verde para
+# selección/estado activo y rojo reservado solo para apagar.
+COLOR_FONDO = "#12141c"
+COLOR_PANEL = "#1b1e2b"
+COLOR_BARRA = "#232738"
+COLOR_TEXTO = "#e7e9f0"
+COLOR_TEXTO_TENUE = "#8c91a8"
+COLOR_ACENTO = "#3ddc97"
+COLOR_ACENTO_TEXTO = "#0b1410"
+
 app = tk.Tk()
 # matchbox-window-manager (configurado en ~/.xinitrc) es quien maximiza y
 # le da el foco de teclado a esta ventana. "overrideredirect" NO debe usarse
 # aquí: le indica a cualquier gestor de ventanas que la ignore por completo,
 # lo cual impide que reciba el foco correctamente.
 app.attributes("-fullscreen", True)
+app.configure(bg=COLOR_FONDO)
 
 icono_apagar = PhotoImage(file=os.path.join(directorio_iconos, "apagadoScale.png"))
 icono_reiniciar = PhotoImage(file=os.path.join(directorio_iconos, "restartScale.png"))
 
-# Botón de apagar
-btn_apagar = tk.Button(app, text="Apagar", command=apagar, bg="red", fg="white", image=icono_apagar, compound="right")
-btn_apagar.pack(side=tk.RIGHT, padx=10, pady=10)
+# --- Encabezado ---
+barra_encabezado = tk.Frame(app, bg=COLOR_BARRA, height=70)
+barra_encabezado.pack(side="top", fill="x")
 
-# Botón de reiniciar
-btn_reiniciar = tk.Button(app, text="Reiniciar", command=reiniciar, bg="yellow", fg="black", image=icono_reiniciar, compound="right")
-btn_reiniciar.pack(side=tk.RIGHT, padx=10, pady=10)
+tk.Label(
+    barra_encabezado, text="FSEM RETRO CONSOLE", bg=COLOR_BARRA, fg=COLOR_ACENTO,
+    font=("DejaVu Sans", 22, "bold"), padx=24,
+).pack(side="left", pady=10)
 
+# --- Pie de página: instrucciones + botones de apagar/reiniciar ---
+barra_pie = tk.Frame(app, bg=COLOR_BARRA, height=60)
+barra_pie.pack(side="bottom", fill="x")
 
-# Carga la imagen que se muestra debajo de los botones
-imagen_debajo = Image.open(os.path.join(directorio_iconos, "instrucciones.png"))
-imagen_debajo = ImageTk.PhotoImage(imagen_debajo)
+if MODO_DEV:
+    texto_instrucciones = "↑ ↓  Navegar      Enter  Jugar      Esc  Salir"
+else:
+    texto_instrucciones = "Cruceta  Navegar      Botón B  Jugar"
 
-# Coloca la imagen en la interfaz
-label_imagen = tk.Label(app, image=imagen_debajo)
-#label_imagen.pack(side=tk.RIGHT, anchor='sw')
-label_imagen.place(relx=0.9, rely=0.95, anchor='s')
+label_instrucciones = tk.Label(
+    barra_pie, text=texto_instrucciones, bg=COLOR_BARRA, fg=COLOR_TEXTO_TENUE,
+    font=("DejaVu Sans", 12), padx=24,
+)
+label_instrucciones.pack(side="left", pady=14)
 
-menu = tk.Listbox(app, selectbackground="lightblue", bg="white", fg="black", font=("Courier", 14))
-menu.pack(side="left", fill="both", expand=True)
+btn_reiniciar = tk.Button(
+    barra_pie, text="Reiniciar", command=reiniciar, image=icono_reiniciar, compound="left",
+    bg=COLOR_BARRA, fg=COLOR_TEXTO, activebackground=COLOR_PANEL, bd=0,
+    font=("DejaVu Sans", 11), padx=10,
+)
+btn_reiniciar.pack(side="right", padx=(0, 16), pady=10)
+
+btn_apagar = tk.Button(
+    barra_pie, text="Apagar", command=apagar, image=icono_apagar, compound="left",
+    bg=COLOR_BARRA, fg="#ff6b6b", activebackground=COLOR_PANEL, bd=0,
+    font=("DejaVu Sans", 11), padx=10,
+)
+btn_apagar.pack(side="right", padx=(0, 8), pady=10)
+
+# --- Cuerpo principal: lista de ROMs (izquierda) + detalle (derecha) ---
+cuerpo = tk.Frame(app, bg=COLOR_FONDO)
+cuerpo.pack(side="top", fill="both", expand=True)
+
+panel_lista = tk.Frame(cuerpo, bg=COLOR_FONDO)
+panel_lista.pack(side="left", fill="both", expand=True, padx=(24, 12), pady=18)
+
+tk.Label(
+    panel_lista, text="ROMS DISPONIBLES", bg=COLOR_FONDO, fg=COLOR_TEXTO_TENUE,
+    font=("DejaVu Sans", 11, "bold"), anchor="w",
+).pack(fill="x", pady=(0, 8))
+
+menu = tk.Listbox(
+    panel_lista, bg=COLOR_PANEL, fg=COLOR_TEXTO,
+    selectbackground=COLOR_ACENTO, selectforeground=COLOR_ACENTO_TEXTO,
+    activestyle="none", bd=0, highlightthickness=0,
+    font=("DejaVu Sans", 16), height=12,
+)
+menu.pack(fill="both", expand=True)
+
+panel_detalle = tk.Frame(cuerpo, bg=COLOR_PANEL, width=320)
+panel_detalle.pack(side="right", fill="y", padx=(12, 24), pady=18)
+panel_detalle.pack_propagate(False)
+
+label_cover = tk.Label(
+    panel_detalle, text="", bg=COLOR_BARRA, fg=COLOR_ACENTO,
+    font=("DejaVu Sans", 28, "bold"), width=12, height=6,
+)
+label_cover.pack(padx=20, pady=(28, 20))
+
+label_detalle_titulo = tk.Label(
+    panel_detalle, text="Selecciona un juego", bg=COLOR_PANEL, fg=COLOR_TEXTO,
+    font=("DejaVu Sans", 16, "bold"), wraplength=260, justify="center",
+)
+label_detalle_titulo.pack(padx=16)
+
+label_detalle_sistema = tk.Label(
+    panel_detalle, text="", bg=COLOR_PANEL, fg=COLOR_TEXTO_TENUE,
+    font=("DejaVu Sans", 12),
+)
+label_detalle_sistema.pack(pady=(4, 0))
 
 for archivo in archivos:
     menu.insert(tk.END, archivo)
+
+if archivos:
+    menu.selection_set(0)
+actualizar_panel_detalle()
 
 menu.bind("<ButtonRelease-1>", on_seleccion)
 app.bind("<Escape>", salir)
