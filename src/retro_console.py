@@ -121,7 +121,12 @@ def salir(event):
     sys.exit(0)
 
 
-# --- Navegación del grid de mosaicos (juegos + Apagar + Reiniciar) ---
+# --- Navegación (juegos en grid + Apagar/Reiniciar en su propia franja) ---
+# Cada tile tiene una posición lógica (fila, columna) en "posiciones", en el
+# mismo orden que "tiles". No depende de cómo se vean agrupados visualmente.
+
+GROSOR_BORDE = 3  # constante a propósito: cambiarlo entre estados hace que
+                   # el widget cambie de tamaño y toda la fila/columna "salte".
 
 def indice_de_tile(tile):
     return tiles.index(tile)
@@ -132,40 +137,42 @@ def restaurar_texto_instrucciones():
 def resaltar_seleccion():
     for i, tile in enumerate(tiles):
         if i == indice_seleccionado[0]:
-            tile.configure(highlightthickness=4, highlightbackground=COLOR_ACENTO, highlightcolor=COLOR_ACENTO)
+            tile.configure(highlightbackground=COLOR_ACENTO, highlightcolor=COLOR_ACENTO)
         else:
-            tile.configure(highlightthickness=2, highlightbackground=COLOR_PANEL, highlightcolor=COLOR_PANEL)
+            tile.configure(highlightbackground=COLOR_PANEL, highlightcolor=COLOR_PANEL)
+
+def indice_en_fila(fila, columna_objetivo):
+    candidatos = [i for i, (f, _c) in enumerate(posiciones) if f == fila]
+    if not candidatos:
+        return None
+    return min(candidatos, key=lambda i: abs(posiciones[i][1] - columna_objetivo))
 
 def mover_seleccion(delta_fila, delta_columna):
-    total = len(tiles)
-    if total == 0:
+    if not tiles:
         return
     if accion_pendiente[0] is not None:
         accion_pendiente[0] = None
         restaurar_texto_instrucciones()
 
-    fila, columna = divmod(indice_seleccionado[0], COLUMNAS_GRID)
+    fila, columna = posiciones[indice_seleccionado[0]]
 
     if delta_columna != 0:
-        nueva_columna = columna + delta_columna
-        if 0 <= nueva_columna < COLUMNAS_GRID:
-            candidato = fila * COLUMNAS_GRID + nueva_columna
-            if candidato < total:
-                indice_seleccionado[0] = candidato
-                resaltar_seleccion()
-                return
+        objetivo = columna + delta_columna
+        candidato = indice_en_fila(fila, objetivo)
+        if candidato is not None and posiciones[candidato][1] == objetivo:
+            indice_seleccionado[0] = candidato
+            resaltar_seleccion()
+            return
 
     if delta_fila != 0:
-        nueva_fila = fila + delta_fila
-        if nueva_fila >= 0:
-            candidato = nueva_fila * COLUMNAS_GRID + columna
-            if candidato < total:
+        filas_disponibles = sorted(set(f for f, _c in posiciones))
+        fila_actual_idx = filas_disponibles.index(fila)
+        nueva_fila_idx = fila_actual_idx + delta_fila
+        if 0 <= nueva_fila_idx < len(filas_disponibles):
+            candidato = indice_en_fila(filas_disponibles[nueva_fila_idx], columna)
+            if candidato is not None:
                 indice_seleccionado[0] = candidato
-            else:
-                ultimo_de_fila = min(total - 1, nueva_fila * COLUMNAS_GRID + COLUMNAS_GRID - 1)
-                if nueva_fila * COLUMNAS_GRID < total:
-                    indice_seleccionado[0] = ultimo_de_fila
-            resaltar_seleccion()
+                resaltar_seleccion()
 
 def confirmar_seleccion():
     if not tiles:
@@ -327,7 +334,7 @@ def copiar_archivos_smc(desde_usb, a_directorio=directorio):
 def crear_tile_juego(parent, archivo):
     tile = tk.Frame(
         parent, bg=COLOR_PANEL, width=ANCHO_TILE, height=ALTO_PORTADA + 70,
-        highlightthickness=2, highlightbackground=COLOR_PANEL,
+        highlightthickness=GROSOR_BORDE, highlightbackground=COLOR_PANEL,
     )
     tile.grid_propagate(False)
     tile.tipo_item = "rom"
@@ -361,48 +368,61 @@ def crear_tile_juego(parent, archivo):
 
     return tile
 
-def crear_tile_accion(parent, accion, etiqueta, icono, color_texto):
-    tile = tk.Frame(
-        parent, bg=COLOR_PANEL, width=ANCHO_TILE, height=ALTO_PORTADA + 70,
-        highlightthickness=2, highlightbackground=COLOR_PANEL,
+def crear_boton_accion(parent, accion, etiqueta, icono, color_texto):
+    # Botón angosto tipo "pastilla" (icono + texto en horizontal), para que
+    # Apagar/Reiniciar se lean como acciones del sistema y no como más
+    # juegos de la galería.
+    boton = tk.Frame(
+        parent, bg=COLOR_PANEL, width=190, height=56,
+        highlightthickness=GROSOR_BORDE, highlightbackground=COLOR_PANEL,
     )
-    tile.grid_propagate(False)
-    tile.tipo_item = "accion"
-    tile.accion_item = accion
+    boton.grid_propagate(False)
+    boton.tipo_item = "accion"
+    boton.accion_item = accion
 
-    tk.Label(tile, image=icono, bg=COLOR_BARRA, width=ANCHO_TILE - 20, height=ALTO_PORTADA - 20).pack(padx=10, pady=(10, 6))
+    contenido = tk.Frame(boton, bg=COLOR_PANEL)
+    contenido.place(relx=0.5, rely=0.5, anchor="center")
+
+    tk.Label(contenido, image=icono, bg=COLOR_PANEL).pack(side="left", padx=(0, 10))
     tk.Label(
-        tile, text=etiqueta, bg=COLOR_PANEL, fg=color_texto,
-        font=("DejaVu Sans", 12, "bold"),
-    ).pack(padx=8, pady=(0, 8))
+        contenido, text=etiqueta, bg=COLOR_PANEL, fg=color_texto,
+        font=("DejaVu Sans", 13, "bold"),
+    ).pack(side="left")
 
-    for widget in (tile, *tile.winfo_children()):
-        widget.bind("<Button-1>", lambda event, t=tile: seleccionar_tile_por_click(t))
+    for widget in (boton, contenido, *contenido.winfo_children()):
+        widget.bind("<Button-1>", lambda event, t=boton: seleccionar_tile_por_click(t))
 
-    return tile
+    return boton
 
 def construir_grid():
     for widget in contenedor_grid.winfo_children():
         widget.destroy()
+    for widget in contenedor_acciones.winfo_children():
+        widget.destroy()
     imagenes_referencia.clear()
     tiles.clear()
+    posiciones.clear()
 
     for i, archivo in enumerate(archivos_actuales):
         tile = crear_tile_juego(contenedor_grid, archivo)
         fila, columna = divmod(i, COLUMNAS_GRID)
         tile.grid(row=fila, column=columna, padx=14, pady=14, sticky="n")
         tiles.append(tile)
+        posiciones.append((fila, columna))
 
-    base = len(archivos_actuales)
-    tile_apagar = crear_tile_accion(contenedor_grid, "apagar", "Apagar", icono_apagar, "#ff6b6b")
-    fila, columna = divmod(base, COLUMNAS_GRID)
-    tile_apagar.grid(row=fila, column=columna, padx=14, pady=14, sticky="n")
-    tiles.append(tile_apagar)
+    # Las acciones viven en su propia franja debajo de la galería, pero
+    # ocupan la "fila" lógica siguiente para la navegación con el control.
+    fila_acciones = (len(archivos_actuales) + COLUMNAS_GRID - 1) // COLUMNAS_GRID if archivos_actuales else 0
 
-    tile_reiniciar = crear_tile_accion(contenedor_grid, "reiniciar", "Reiniciar", icono_reiniciar, "#e8c35c")
-    fila, columna = divmod(base + 1, COLUMNAS_GRID)
-    tile_reiniciar.grid(row=fila, column=columna, padx=14, pady=14, sticky="n")
-    tiles.append(tile_reiniciar)
+    boton_apagar = crear_boton_accion(contenedor_acciones, "apagar", "Apagar", icono_apagar, "#ff6b6b")
+    boton_apagar.grid(row=0, column=0, padx=10, pady=10)
+    tiles.append(boton_apagar)
+    posiciones.append((fila_acciones, 0))
+
+    boton_reiniciar = crear_boton_accion(contenedor_acciones, "reiniciar", "Reiniciar", icono_reiniciar, "#e8c35c")
+    boton_reiniciar.grid(row=0, column=1, padx=10, pady=10)
+    tiles.append(boton_reiniciar)
+    posiciones.append((fila_acciones, 1))
 
     if indice_seleccionado[0] >= len(tiles):
         indice_seleccionado[0] = max(0, len(tiles) - 1)
@@ -423,6 +443,7 @@ def cerrar_ventana_usb_activa():
 ventanas = {}
 archivos_actuales = []
 tiles = []
+posiciones = []
 imagenes_referencia = []
 indice_seleccionado = [0]
 accion_pendiente = [None]
@@ -503,17 +524,35 @@ label_instrucciones = tk.Label(
 )
 label_instrucciones.pack(side="left", pady=12)
 
-# --- Cuerpo principal: grid de mosaicos (juegos + Apagar + Reiniciar) ---
+# --- Cuerpo principal: galería de juegos + franja de acciones del sistema ---
 cuerpo = tk.Frame(app, bg=COLOR_FONDO)
 cuerpo.pack(side="top", fill="both", expand=True)
 
+zona_galeria = tk.Frame(cuerpo, bg=COLOR_FONDO)
+zona_galeria.pack(fill="both", expand=True)
+
 tk.Label(
-    cuerpo, text="GALERÍA DE JUEGOS", bg=COLOR_FONDO, fg=COLOR_TEXTO_TENUE,
+    zona_galeria, text="GALERÍA DE JUEGOS", bg=COLOR_FONDO, fg=COLOR_TEXTO_TENUE,
     font=("DejaVu Sans", 11, "bold"), anchor="w",
 ).pack(fill="x", padx=24, pady=(18, 4))
 
-contenedor_grid = tk.Frame(cuerpo, bg=COLOR_FONDO)
-contenedor_grid.pack(padx=10, pady=10)
+# "expand=True" sin "fill" centra el contenido en el espacio disponible
+# (horizontal y vertical), en vez de quedar pegado arriba a la izquierda.
+contenedor_grid = tk.Frame(zona_galeria, bg=COLOR_FONDO)
+contenedor_grid.pack(expand=True)
+
+tk.Frame(cuerpo, bg=COLOR_BARRA, height=1).pack(fill="x", padx=24)
+
+zona_acciones = tk.Frame(cuerpo, bg=COLOR_FONDO)
+zona_acciones.pack(fill="x", pady=(10, 20))
+
+tk.Label(
+    zona_acciones, text="SISTEMA", bg=COLOR_FONDO, fg=COLOR_TEXTO_TENUE,
+    font=("DejaVu Sans", 11, "bold"), anchor="w",
+).pack(fill="x", padx=24, pady=(10, 4))
+
+contenedor_acciones = tk.Frame(zona_acciones, bg=COLOR_FONDO)
+contenedor_acciones.pack()
 
 construir_grid()
 
