@@ -70,12 +70,15 @@ function snes9x (){
 
 function preparar_directorios(){
   local repo_dir="$1"
-  echo -e "[!] Preparando directorios de ROMs e íconos"
+  echo -e "[!] Preparando directorios de ROMs, íconos y splash"
 
-  mkdir -p ~/retro-console/roms ~/retro-console/icons
+  mkdir -p ~/retro-console/roms ~/retro-console/icons ~/retro-console/splash
   cp -n "$repo_dir"/src/icons/*.png ~/retro-console/icons/
+  cp -n "$repo_dir"/src/assets/splash.png ~/retro-console/splash/splash.png
 
   echo -e "[+] Directorios listos en ~/retro-console"
+  echo -e "[!] Falta agregar ~/retro-console/splash/boot.wav con el sonido de"
+  echo -e "    arranque; sin ese archivo, el splash se muestra sin audio."
 }
 
 function configurar_entorno_grafico(){
@@ -92,7 +95,8 @@ function configurar_entorno_grafico(){
    xserver-xorg-legacy \
    xinit \
    x11-xserver-utils \
-   matchbox-window-manager
+   matchbox-window-manager \
+   alsa-utils
 
   # En Raspberry Pi OS (Bookworm/Trixie) con autologin simple, Xorg no
   # arranca por defecto porque no reconoce la sesión como gestionada por
@@ -110,6 +114,7 @@ EOF
 #!/bin/sh
 export RETRO_CONSOLE_DEV=1
 matchbox-window-manager -use_titlebar no &
+python3 $repo_dir/src/splash.py
 exec python3 $repo_dir/src/retro_console.py
 EOF
   chmod +x ~/.xinitrc
