@@ -10,6 +10,11 @@
 # inconsistente sin que nadie se entere.
 set -euo pipefail
 
+if [ "$(id -u)" -eq 0 ]; then
+  echo "[X] Ejecútalo como usuario normal, sin sudo" >&2
+  exit 1
+fi
+
 function install_python_deps(){
   echo -e "[!] Instalando dependencias de Python y la interfaz gráfica"
   sleep 2
@@ -99,14 +104,68 @@ EOF
 
   cat > ~/.xinitrc <<EOF
 #!/bin/sh
+# La pantalla no debe apagarse: sin teclado no habría cómo despertarla.
+xset s off -dpms
 matchbox-window-manager -use_titlebar no &
 exec python3 $repo_dir/src/retro_console.py
 EOF
   chmod +x ~/.xinitrc
 
-  echo -e "[+] Entorno gráfico configurado. Puede que sea necesario cerrar sesión"
-  echo -e "    o reiniciar para que el cambio de grupos surta efecto."
-  echo -e "    Después, iniciar la interfaz con: startx"
+  echo -e "[+] Entorno gráfico configurado"
+}
+
+function configurar_arranque(){
+  local repo_dir="$1"
+  local temporal
+  echo -e "[!] Configurando el arranque automático"
+
+  # Terminal de mantenimiento (VIEW + MENU durante 5 s).
+  sudo apt-get install -y kbd
+  sudo install -o root -g root -m 755 "$repo_dir/src/retro-terminal.sh" /usr/local/sbin/retro-terminal
+
+  # Apagar, reiniciar y abrir la terminal desde el menú, sin contraseña.
+  temporal="$(mktemp)"
+  echo "$USER ALL=(root) NOPASSWD: /usr/bin/systemctl poweroff, /usr/bin/systemctl reboot, /usr/local/sbin/retro-terminal" > "$temporal"
+  sudo visudo -cqf "$temporal"
+  sudo install -o root -g root -m 440 "$temporal" /etc/sudoers.d/retro-console
+
+  sed -e "s|@USUARIO@|$USER|g" -e "s|@HOME@|$HOME|g" \
+    "$repo_dir/src/retro-console.service" > "$temporal"
+  sudo install -o root -g root -m 644 "$temporal" /etc/systemd/system/retro-console.service
+  rm -f "$temporal"
+  sudo systemctl daemon-reload
+  sudo systemctl set-default multi-user.target
+  sudo systemctl disable getty@tty1.service
+  sudo systemctl enable retro-console.service
+
+  # Arranque limpio: oculta los mensajes de Linux, el cursor y el arcoíris.
+  # La primera vez se guarda una copia con extensión .retro-bak.
+  local boot=/boot/firmware
+  [ -f "$boot/cmdline.txt" ] || boot=/boot
+  if [ -f "$boot/cmdline.txt" ]; then
+    [ -f "$boot/cmdline.txt.retro-bak" ] || sudo cp "$boot/cmdline.txt" "$boot/cmdline.txt.retro-bak"
+    temporal="$(mktemp)"
+    # Debe quedar en una sola línea y conservar root=.
+    sed -E '1!d; s/console=tty1/console=tty3/; s/ (splash|plymouth\.[^ ]+)( |$)/ /g' "$boot/cmdline.txt" \
+      | tr -d '\n' | sed -E 's/[[:space:]]+$//' > "$temporal"
+    local opcion
+    for opcion in quiet loglevel=3 logo.nologo vt.global_cursor_default=0 systemd.show_status=false; do
+      grep -qE "(^| )${opcion//./\\.}( |$)" "$temporal" || printf ' %s' "$opcion" >> "$temporal"
+    done
+    echo >> "$temporal"
+    if grep -q 'root=' "$temporal"; then
+      sudo cp "$temporal" "$boot/cmdline.txt"
+    else
+      echo "[!] cmdline.txt inesperado; no se modificó"
+    fi
+    rm -f "$temporal"
+  fi
+  if [ -f "$boot/config.txt" ] && ! grep -q '^disable_splash=1' "$boot/config.txt"; then
+    [ -f "$boot/config.txt.retro-bak" ] || sudo cp "$boot/config.txt" "$boot/config.txt.retro-bak"
+    printf '\n[all]\ndisable_splash=1\n' | sudo tee -a "$boot/config.txt" > /dev/null
+  fi
+
+  echo -e "[+] Listo. Reinicia con: sudo reboot"
 }
 
 function main(){
@@ -117,6 +176,7 @@ function main(){
   preparar_directorios "$repo_dir"
   configurar_usb "$repo_dir"
   configurar_entorno_grafico "$repo_dir"
+  configurar_arranque "$repo_dir"
 }
 
 

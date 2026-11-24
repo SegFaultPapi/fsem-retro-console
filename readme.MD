@@ -19,7 +19,7 @@ El prototipo está en desarrollo.
 | Control con gamepad (menú, juego y salida) | Implementado; falta probarlo en la Raspberry Pi |
 | Importación desde USB | Implementada; falta probarla en la Raspberry Pi |
 | ROMs precargadas por el instalador | Pendiente |
-| Arranque automático (systemd) | Pendiente |
+| Arranque automático (systemd) | Implementado; falta probarlo en la Raspberry Pi |
 | Control remoto | Pendiente |
 
 ## Materiales
@@ -61,10 +61,21 @@ Criterios de selección: [`doc/fuentes-roms.md`](doc/fuentes-roms.md).
 
 ## Ejecución
 
-Desde la consola local, no por SSH:
+La consola inicia sola al encender. Para mantenimiento, mantener VIEW + MENU
+5 segundos en el menú: aparece una terminal que pide usuario y contraseña (requiere teclado).
+La misma combinación regresa a la consola. Comandos útiles:
 
 ```bash
-startx
+sudo systemctl stop retro-console       # detener
+sudo systemctl restart retro-console    # reiniciar
+journalctl -u retro-console -b          # ver errores
+```
+
+Para volver al inicio de sesión normal:
+
+```bash
+sudo systemctl disable --now retro-console
+sudo systemctl enable --now getty@tty1
 ```
 
 El splash dura 5 segundos y después aparece la galería.
@@ -74,13 +85,15 @@ El splash dura 5 segundos y después aparece la galería.
 | Navegar | Cruceta | Flechas |
 | Confirmar | A | Enter |
 | Cancelar / cerrar la lista de USB | B | No disponible |
+| Abrir la terminal / volver a la consola | VIEW + MENU 5 s en el menú | Ctrl+Alt+F2 / Ctrl+Alt+F1 |
 | Salir del juego | VIEW + MENU | F12 (Mednafen) |
 | Cerrar el programa | No disponible | Esc |
 
 Dentro del juego, VIEW es SELECT y MENU es START. En NES y GBA, A es A y X es B; en SNES los
 botones corresponden por posición. El control puede conectarse después de iniciar.
 
-Para probar con teclado: `RETRO_CONSOLE_DEV=1 startx`.
+Para probar con teclado: detener el servicio y ejecutar
+`RETRO_CONSOLE_DEV=1 startx` desde la consola local.
 
 ## Importar ROMs desde USB
 
@@ -123,6 +136,8 @@ src/control.py         Gamepad
 src/emulador.py        Proceso de Mednafen y mapeo del control
 src/importador.py      Detección de USB y copia sin duplicados
 src/pantalla_usb.py    Pantalla de importación
+src/retro-console.service  Arranque automático
+src/retro-terminal.sh  Terminal de mantenimiento
 src/retro-usb.sh       Montaje de USB en solo lectura
 src/splash.py          Splash de arranque
 src/assets/            Imagen y sonido de arranque

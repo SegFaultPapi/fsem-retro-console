@@ -12,6 +12,8 @@ import os
 import logging
 import math
 import queue
+import subprocess as sp
+import time
 import sys
 from PIL import Image, ImageTk
 from control import Control
@@ -51,6 +53,7 @@ ALTO_PORTADA = 150
 # estado; así, lo que se presiona durante una partida no mueve el menú.
 #   splash -> menu <-> juego
 #   menu/juego -> usb_copiando -> usb_menu -> menu/juego
+#   menu <-> terminal (VIEW + MENU durante 5 s)
 estado = ["splash"]
 usb_pendientes = []  # memorias conectadas que aún no se importan
 eventos = queue.Queue()
@@ -79,7 +82,61 @@ def actualizar_estado_control():
     punto_control.config(fg=color)
     label_control.config(text=texto)
 
+SEGUNDOS_TERMINAL = 5
+combo_desde = [None]  # momento en que se presionó VIEW + MENU
+vt_consola = [None]   # terminal virtual donde se dibuja la consola
+
+def vt_activa():
+    """Número de la terminal virtual visible, o None si no se puede saber."""
+    try:
+        with open("/sys/class/tty/tty0/active") as f:
+            return int(f.read().strip().replace("tty", ""))
+    except (OSError, ValueError):
+        return None
+
+def ejecutar_terminal(*args):
+    try:
+        r = sp.run(["sudo", "-n", "/usr/local/sbin/retro-terminal", *args],
+                   capture_output=True, text=True, timeout=5)
+    except (OSError, sp.TimeoutExpired) as e:
+        logging.error("retro-terminal: %s", e)
+        return False
+    if r.returncode != 0:
+        logging.error("retro-terminal: %s", r.stderr.strip())
+    return r.returncode == 0
+
+def revisar_terminal():
+    # Si se volvió con el teclado (Ctrl+Alt+F1), también se recupera el control.
+    if estado[0] == "terminal" and vt_activa() == vt_consola[0]:
+        estado[0] = "menu"
+        restaurar_texto_instrucciones()
+
+    if combo_desde[0] is None or estado[0] not in ("menu", "terminal"):
+        return
+    transcurrido = time.monotonic() - combo_desde[0]
+    if transcurrido < SEGUNDOS_TERMINAL:
+        if estado[0] == "menu" and transcurrido > 1:
+            mostrar_aviso(f"Abriendo terminal en {math.ceil(SEGUNDOS_TERMINAL - transcurrido)}...")
+        return
+    combo_desde[0] = None  # hay que soltar y volver a presionar
+    if estado[0] == "terminal":
+        ejecutar_terminal("volver", str(vt_consola[0]))
+        return
+    accion_pendiente[0] = None
+    vt_consola[0] = vt_activa()
+    if vt_consola[0] is not None and ejecutar_terminal("abrir"):
+        estado[0] = "terminal"
+    else:
+        mostrar_aviso("No se pudo abrir la terminal")
+
 def atender_evento(accion):
+    if accion == "salir_juego":
+        combo_desde[0] = time.monotonic()
+    elif accion in ("combo_suelto", "desconectado"):
+        if combo_desde[0] is not None and estado[0] == "menu":
+            restaurar_texto_instrucciones()
+        combo_desde[0] = None
+
     if isinstance(accion, tuple):
         tipo, dato = accion
         if tipo == "usb_insertada":
@@ -92,6 +149,8 @@ def atender_evento(accion):
     elif estado[0] == "juego":
         if accion == "salir_juego":
             emulador.terminar()
+    elif estado[0] == "terminal":
+        pass  # la consola no está a la vista: no debe responder
     elif estado[0] == "usb_menu":
         pantalla_usb.atender(accion)
     elif accion == "arriba":
@@ -179,6 +238,7 @@ def ciclo():
             if codigo != 0:
                 mostrar_aviso(f"El juego no pudo abrirse: {ultimo_mensaje() or codigo}")
             mostrar_frontend()
+    revisar_terminal()
     if usb_pendientes and (estado[0] == "menu" or (estado[0] == "juego" and emulador.activo()
                                                    and not emulador.cerrando())):
         iniciar_importacion()
@@ -214,10 +274,10 @@ def buscar_portada(nombre_archivo):
 
 
 def apagar():
-    os.system("shutdown now")
+    os.system("sudo -n systemctl poweroff")
 
 def reiniciar():
-    os.system("reboot")
+    os.system("sudo -n systemctl reboot")
 
 def salir(event):
     app.destroy()

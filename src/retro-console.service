@@ -1,0 +1,31 @@
+# Descripción: arranca la consola al encender, sin login ni teclado.
+#              autorun.sh reemplaza @USUARIO@ y @HOME@ al instalarlo.
+# Autor(es):   SegFaultPapi
+# Licencia:    MIT (ver LICENSE)
+
+[Unit]
+Description=FSEm Retro Console
+After=systemd-user-sessions.service getty@tty1.service sound.target
+Conflicts=getty@tty1.service
+# Sin límite de reinicios: la consola no debe quedarse en negro.
+StartLimitIntervalSec=0
+
+[Service]
+User=@USUARIO@
+WorkingDirectory=@HOME@
+# Sesión normal de logind: da acceso al video, al audio y a la terminal.
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+ExecStart=/usr/bin/startx @HOME@/.xinitrc -- :0 vt1 -keeptty -nocursor
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

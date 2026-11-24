@@ -45,6 +45,7 @@ class Traductor:
             # El kernel descartó eventos: lo que se creía presionado ya no es fiable.
             self.presionados.clear()
             self.direccion.clear()
+            return "combo_suelto"
         elif tipo == EV_KEY:
             return self._boton(codigo, valor)
         elif tipo == EV_ABS and codigo in EJES:
@@ -53,8 +54,9 @@ class Traductor:
 
     def _boton(self, codigo, valor):
         if valor == 0:
+            completo = COMBO_SALIR <= self.presionados
             self.presionados.discard(codigo)
-            return None
+            return "combo_suelto" if completo and codigo in COMBO_SALIR else None
         if valor != 1:  # repetición automática
             return None
         self.presionados.add(codigo)
