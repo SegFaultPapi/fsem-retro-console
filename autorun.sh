@@ -131,53 +131,9 @@ function configurar_arranque(){
   sudo visudo -cqf "$temporal"
   sudo install -o root -g root -m 440 "$temporal" /etc/sudoers.d/retro-console
 
-  # Autologin en tty1: reproduce el mismo entorno que un startx manual.
-  sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-  sudo tee /etc/systemd/system/getty@tty1.service.d/retro-console.conf > /dev/null <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $USER --noissue --noclear %I \$TERM
-EOF
-  sed "s|@USUARIO@|$USER|g" "$repo_dir/src/retro-autostart.sh" > "$temporal"
-  sudo install -o root -g root -m 644 "$temporal" /etc/profile.d/retro-console.sh
   rm -f "$temporal"
-  touch ~/.hushlogin  # sin mensaje de bienvenida
 
-  # Versiones anteriores usaban un servicio propio: se retira.
-  if [ -f /etc/systemd/system/retro-console.service ]; then
-    sudo systemctl disable retro-console.service || true
-    sudo rm -f /etc/systemd/system/retro-console.service
-  fi
-  sudo systemctl daemon-reload
-  sudo systemctl set-default multi-user.target
-  sudo systemctl enable getty@tty1.service
-
-  # Arranque limpio: oculta los mensajes de Linux, el cursor y el arcoíris.
-  # La primera vez se guarda una copia con extensión .retro-bak.
-  local boot=/boot/firmware
-  [ -f "$boot/cmdline.txt" ] || boot=/boot
-  if [ -f "$boot/cmdline.txt" ]; then
-    [ -f "$boot/cmdline.txt.retro-bak" ] || sudo cp "$boot/cmdline.txt" "$boot/cmdline.txt.retro-bak"
-    temporal="$(mktemp)"
-    # Debe quedar en una sola línea y conservar root=.
-    sed -E '1!d; s/console=tty1/console=tty3/; s/ (splash|plymouth\.[^ ]+)( |$)/ /g' "$boot/cmdline.txt" \
-      | tr -d '\n' | sed -E 's/[[:space:]]+$//' > "$temporal"
-    local opcion
-    for opcion in quiet loglevel=3 logo.nologo vt.global_cursor_default=0 systemd.show_status=false; do
-      grep -qE "(^| )${opcion//./\\.}( |$)" "$temporal" || printf ' %s' "$opcion" >> "$temporal"
-    done
-    echo >> "$temporal"
-    if grep -q 'root=' "$temporal"; then
-      sudo cp "$temporal" "$boot/cmdline.txt"
-    else
-      echo "[!] cmdline.txt inesperado; no se modificó"
-    fi
-    rm -f "$temporal"
-  fi
-  if [ -f "$boot/config.txt" ] && ! grep -q '^disable_splash=1' "$boot/config.txt"; then
-    [ -f "$boot/config.txt.retro-bak" ] || sudo cp "$boot/config.txt" "$boot/config.txt.retro-bak"
-    printf '\n[all]\ndisable_splash=1\n' | sudo tee -a "$boot/config.txt" > /dev/null
-  fi
+  sudo bash "$repo_dir/src/arranque-limpio.sh" "$USER"
 
   echo -e "[+] Listo. Reinicia con: sudo reboot"
 }

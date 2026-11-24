@@ -74,8 +74,9 @@ tail ~/retro-console/consola.log        # registro de la consola
 Para volver al inicio de sesión normal:
 
 ```bash
-sudo rm /etc/profile.d/retro-console.sh /etc/systemd/system/getty@tty1.service.d/retro-console.conf
-sudo systemctl daemon-reload && sudo systemctl restart getty@tty1
+sudo rm /etc/profile.d/retro-console.sh /etc/systemd/system/getty@tty1.service.d/zz-retro-console.conf
+sudo cp /boot/firmware/cmdline.txt.retro-bak /boot/firmware/cmdline.txt
+sudo reboot
 ```
 
 El splash dura 5 segundos y después aparece la galería.
@@ -137,6 +138,7 @@ src/emulador.py        Proceso de Mednafen y mapeo del control
 src/importador.py      Detección de USB y copia sin duplicados
 src/pantalla_usb.py    Pantalla de importación
 src/privilegios.py     Comandos que requieren permisos
+src/arranque-limpio.sh  Sesión automática y arranque sin mensajes
 src/retro-autostart.sh  Arranque automático
 src/retro-terminal.sh  Terminal de mantenimiento
 src/retro-usb.sh       Montaje de USB en solo lectura
