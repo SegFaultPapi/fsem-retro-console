@@ -99,8 +99,13 @@ startx
 `src/assets/boot.wav`; después aparece la galería. Para personalizarlos se colocan
 `splash.png` y `boot.wav` en `~/retro-console/splash/`, que tienen prioridad.
 
-La salida por defecto es el jack de 3.5 mm. Si no se escucha, ver «Solución de problemas» en
-[`readme.MD`](../readme.MD).
+Si no se escucha, listar las salidas con `aplay -L`, probar con
+`aplay -D plughw:CARD=vc4hdmi0 src/assets/boot.wav` y, si funciona, agregar a `~/.xinitrc`,
+antes de iniciar el programa:
+
+```bash
+export RETRO_CONSOLE_AUDIO=plughw:CARD=vc4hdmi0
+```
 
 ## Validaciones a realizar
 

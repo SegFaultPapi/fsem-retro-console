@@ -52,21 +52,6 @@ function preparar_directorios(){
   echo -e "[+] Directorios listos en ~/retro-console"
 }
 
-function configurar_audio(){
-  local repo_dir="$1"
-  echo -e "[!] Configurando el audio (jack de 3.5 mm)"
-  sudo apt-get install -y alsa-utils
-  sudo usermod -aG audio "$USER"
-  sudo install -o root -g root -m 755 "$repo_dir/src/retro-audio.sh" /usr/local/bin/retro-audio
-
-  # Habilita el audio analógico de la tarjeta (requiere reiniciar).
-  local config=/boot/firmware/config.txt
-  [ -f "$config" ] || config=/boot/config.txt
-  if [ -f "$config" ] && ! grep -qE '^[[:space:]]*dtparam=audio=on' "$config"; then
-    printf '\n[all]\ndtparam=audio=on\n' | sudo tee -a "$config" > /dev/null
-  fi
-}
-
 function configurar_usb(){
   local repo_dir="$1"
   echo -e "[!] Configurando la importación desde USB"
@@ -114,8 +99,6 @@ EOF
 
   cat > ~/.xinitrc <<EOF
 #!/bin/sh
-# Jack de 3.5 mm si existe; para forzar otra salida, definir la variable antes.
-export RETRO_CONSOLE_AUDIO="\${RETRO_CONSOLE_AUDIO:-\$(/usr/local/bin/retro-audio)}"
 matchbox-window-manager -use_titlebar no &
 exec python3 $repo_dir/src/retro_console.py
 EOF
@@ -132,7 +115,6 @@ function main(){
   install_python_deps
   instalar_emulador
   preparar_directorios "$repo_dir"
-  configurar_audio "$repo_dir"
   configurar_usb "$repo_dir"
   configurar_entorno_grafico "$repo_dir"
 }

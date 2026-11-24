@@ -106,9 +106,9 @@ python3 src/tools/generar_sonido.py
 - **No se detecta el gamepad:** revisar `lsusb` y `ls /dev/input/by-id/`.
 - **Los botones no corresponden:** instalar `evtest`, ejecutar `sudo evtest` y ajustar los
   códigos en `src/control.py`.
-- **No hay sonido:** por defecto se usa el jack de 3.5 mm. Probarlo con
-  `aplay -D plughw:CARD=Headphones src/assets/boot.wav`. Para usar HDMI:
-  `RETRO_CONSOLE_AUDIO=plughw:CARD=vc4hdmi0 startx`.
+- **No hay sonido:** listar salidas con `aplay -L` y probar
+  `aplay -D plughw:CARD=vc4hdmi0 src/assets/boot.wav`. Si funciona, agregar
+  `export RETRO_CONSOLE_AUDIO=plughw:CARD=vc4hdmi0` a `~/.xinitrc` antes de iniciar el programa.
 - **No aparecen juegos:** comprobar las extensiones `.nes`, `.smc`, `.sfc` o `.gba`.
 - **No abre el juego o no responde el control:** revisar `~/retro-console/mednafen.log`. Debe
   listar el control con su ID; si no, comprobar `ls /dev/input/js0` y que `groups` incluya `input`.
@@ -123,7 +123,6 @@ src/control.py         Gamepad
 src/emulador.py        Proceso de Mednafen y mapeo del control
 src/importador.py      Detección de USB y copia sin duplicados
 src/pantalla_usb.py    Pantalla de importación
-src/retro-audio.sh     Selección del jack de 3.5 mm
 src/retro-usb.sh       Montaje de USB en solo lectura
 src/splash.py          Splash de arranque
 src/assets/            Imagen y sonido de arranque
