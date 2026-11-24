@@ -30,6 +30,10 @@ function install_python_deps(){
 function instalar_emulador(){
   echo -e "[!] Instalando Mednafen (NES, SNES y GBA)"
   sudo apt-get install -y mednafen
+  if [ ! -x /usr/games/mednafen ] && ! command -v mednafen > /dev/null; then
+    echo "[X] Mednafen no quedó instalado" >&2
+    exit 1
+  fi
 
   # Mednafen lee el control por /dev/input/jsX (módulo joydev) y, para
   # identificarlo, por /dev/input/eventX (grupo input).
@@ -46,6 +50,21 @@ function preparar_directorios(){
   cp -n "$repo_dir"/src/icons/*.png ~/retro-console/icons/
 
   echo -e "[+] Directorios listos en ~/retro-console"
+}
+
+function configurar_audio(){
+  local repo_dir="$1"
+  echo -e "[!] Configurando el audio (jack de 3.5 mm)"
+  sudo apt-get install -y alsa-utils
+  sudo usermod -aG audio "$USER"
+  sudo install -o root -g root -m 755 "$repo_dir/src/retro-audio.sh" /usr/local/bin/retro-audio
+
+  # Habilita el audio analógico de la tarjeta (requiere reiniciar).
+  local config=/boot/firmware/config.txt
+  [ -f "$config" ] || config=/boot/config.txt
+  if [ -f "$config" ] && ! grep -qE '^[[:space:]]*dtparam=audio=on' "$config"; then
+    printf '\n[all]\ndtparam=audio=on\n' | sudo tee -a "$config" > /dev/null
+  fi
 }
 
 function configurar_usb(){
@@ -95,6 +114,8 @@ EOF
 
   cat > ~/.xinitrc <<EOF
 #!/bin/sh
+# Jack de 3.5 mm si existe; para forzar otra salida, definir la variable antes.
+export RETRO_CONSOLE_AUDIO="\${RETRO_CONSOLE_AUDIO:-\$(/usr/local/bin/retro-audio)}"
 matchbox-window-manager -use_titlebar no &
 exec python3 $repo_dir/src/retro_console.py
 EOF
@@ -107,9 +128,11 @@ EOF
 
 function main(){
   local repo_dir="$(pwd)"
+  sudo apt-get update
   install_python_deps
   instalar_emulador
   preparar_directorios "$repo_dir"
+  configurar_audio "$repo_dir"
   configurar_usb "$repo_dir"
   configurar_entorno_grafico "$repo_dir"
 }
