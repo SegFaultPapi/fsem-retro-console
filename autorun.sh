@@ -9,6 +9,8 @@
 # que falla): así un paso roto no deja pasos siguientes en un estado
 # inconsistente sin que nadie se entere.
 set -euo pipefail
+set -E  # el aviso también aplica dentro de las funciones
+trap 'echo "[X] La instalación se detuvo en la línea $LINENO: $BASH_COMMAND" >&2' ERR
 
 if [ "$(id -u)" -eq 0 ]; then
   echo "[X] Ejecútalo como usuario normal, sin sudo" >&2

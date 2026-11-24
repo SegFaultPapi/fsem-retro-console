@@ -12,7 +12,6 @@ import os
 import logging
 import math
 import queue
-import subprocess as sp
 import time
 import sys
 from PIL import Image, ImageTk
@@ -20,6 +19,7 @@ from control import Control
 from pantalla_usb import PantallaUSB
 from emulador import Emulador, es_rom, sistema_de, ultimo_mensaje
 import importador
+import privilegios
 from splash import mostrar_splash
 
 # Directorio donde se almacenan y buscan las ROMs (en la Raspberry Pi).
@@ -95,15 +95,7 @@ def vt_activa():
         return None
 
 def ejecutar_terminal(*args):
-    try:
-        r = sp.run(["sudo", "-n", "/usr/local/sbin/retro-terminal", *args],
-                   capture_output=True, text=True, timeout=5)
-    except (OSError, sp.TimeoutExpired) as e:
-        logging.error("retro-terminal: %s", e)
-        return False
-    if r.returncode != 0:
-        logging.error("retro-terminal: %s", r.stderr.strip())
-    return r.returncode == 0
+    return privilegios.ejecutar("/usr/local/sbin/retro-terminal", *args, espera=5)
 
 def revisar_terminal():
     # Si se volvió con el teclado (Ctrl+Alt+F1), también se recupera el control.
@@ -124,10 +116,14 @@ def revisar_terminal():
         return
     accion_pendiente[0] = None
     vt_consola[0] = vt_activa()
-    if vt_consola[0] is not None and ejecutar_terminal("abrir"):
+    if vt_consola[0] is None:
+        mostrar_aviso("No se pudo abrir la terminal: se desconoce la pantalla activa")
+        return
+    ok, motivo = ejecutar_terminal("abrir")
+    if ok:
         estado[0] = "terminal"
     else:
-        mostrar_aviso("No se pudo abrir la terminal")
+        mostrar_aviso(f"No se pudo abrir la terminal: {motivo.splitlines()[0][:70]}")
 
 def atender_evento(accion):
     if accion == "salir_juego":
@@ -273,11 +269,16 @@ def buscar_portada(nombre_archivo):
     return None
 
 
+def energia(accion):
+    ok, motivo = privilegios.ejecutar("/usr/bin/systemctl", accion, sin_sudo=True, espera=10)
+    if not ok:
+        mostrar_aviso(f"No se pudo completar la acción: {motivo.splitlines()[0][:80]}")
+
 def apagar():
-    os.system("sudo -n systemctl poweroff")
+    energia("poweroff")
 
 def reiniciar():
-    os.system("sudo -n systemctl reboot")
+    energia("reboot")
 
 def salir(event):
     app.destroy()

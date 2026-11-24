@@ -136,6 +136,7 @@ src/control.py         Gamepad
 src/emulador.py        Proceso de Mednafen y mapeo del control
 src/importador.py      Detección de USB y copia sin duplicados
 src/pantalla_usb.py    Pantalla de importación
+src/privilegios.py     Comandos que requieren permisos
 src/retro-console.service  Arranque automático
 src/retro-terminal.sh  Terminal de mantenimiento
 src/retro-usb.sh       Montaje de USB en solo lectura

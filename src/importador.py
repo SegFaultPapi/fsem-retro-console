@@ -9,9 +9,9 @@
 import hashlib
 import os
 import shutil
-import subprocess as sp
 import threading
 
+import privilegios
 from emulador import es_rom
 
 AYUDANTE = "/usr/local/sbin/retro-usb"  # ver src/retro-usb.sh
@@ -101,7 +101,7 @@ def importar(origen, carpeta):
 
 
 def _ayudante(*args):
-    return sp.run(["sudo", "-n", AYUDANTE, *args], capture_output=True, text=True, timeout=30)
+    return privilegios.ejecutar(AYUDANTE, *args)
 
 
 def importar_usb(nodo, carpeta):
@@ -109,16 +109,15 @@ def importar_usb(nodo, carpeta):
     resultado = Resultado()
     nombre = os.path.basename(nodo)
     try:
-        montaje = _ayudante("montar", nombre)
-        if montaje.returncode != 0:
-            resultado.errores.append("No se pudo leer la memoria USB")
-            print(f"[!] {AYUDANTE}: {montaje.stderr.strip()}")
+        ok, salida = _ayudante("montar", nombre)
+        if not ok:
+            resultado.errores.append(f"No se pudo leer la memoria USB: {salida}")
             return resultado
         try:
-            resultado = importar(montaje.stdout.strip(), carpeta)
+            resultado = importar(salida, carpeta)
         finally:
             _ayudante("desmontar", nombre)
-    except (OSError, sp.TimeoutExpired) as e:
+    except OSError as e:
         resultado.errores.append(f"Error al importar: {e}")
     return resultado
 
