@@ -9,11 +9,12 @@ import threading
 import shutil
 import os
 import math
+import queue
 import pyudev
-from evdev import InputDevice, ecodes
-import evdev
 import sys
 from PIL import Image, ImageTk
+from control import Control
+from emulador import Emulador, es_rom, sistema_de
 from splash import mostrar_splash
 
 # Directorio donde se almacenan y buscan las ROMs (en la Raspberry Pi).
@@ -24,13 +25,9 @@ directorio = directorio_actual
 usb = 0
 dispositivo = 0
 
-# Directorio de los iconos de la interfaz y ruta del binario de Snes9x,
-# instalados siguiendo las instrucciones de src/README.md
+# Directorio de los iconos de la interfaz
 directorio_iconos = os.path.expanduser("~/retro-console/icons")
-snes9x_bin = os.path.expanduser("~/snes9x-1.60/gtk/build/snes9x-gtk")
 
-# Se crean aquí, antes de la detección del control, para que existan
-# aunque el script termine por no encontrar un joystick.
 os.makedirs(directorio_actual, exist_ok=True)
 os.makedirs(directorio_iconos, exist_ok=True)
 
@@ -45,47 +42,87 @@ ANCHO_TILE = 180
 ALTO_PORTADA = 150
 
 
-# Busca el dispositivo de entrada del control
-joystick = None
+# Estados de la consola: "splash", "menu" o "juego". Las acciones del control
+# se interpretan según el estado; así, lo que se presiona durante una partida
+# no mueve el menú ni activa Apagar.
+estado = ["splash"]
+eventos = queue.Queue()
+control = Control(eventos)
+emulador = Emulador()
 
-for device in [InputDevice(fn) for fn in evdev.list_devices()]:
-    #capabilities = device.capabilities(verbose=True)
-    if evdev.ecodes.EV_ABS in device.capabilities():
-        joystick = device
-        break
-
-if joystick:
-    print(f"Joystick detectado: {joystick.name}")
-elif MODO_DEV:
-    print("No se encontró un joystick. Modo de desarrollo activo: usando teclado (flechas + Enter).")
-else:
-    print("No se encontró un joystick.")
-    sys.exit(1)
-
-
-def ejecutar_snes9x(nombre_archivo):
-    ruta_archivo = os.path.join(directorio, nombre_archivo)
-    # Avisa que se está lanzando el juego: la interfaz se congela mientras
-    # Snes9x corre (sp.run es bloqueante), así que sin esto parecería
-    # que el programa no respondió al presionar la tecla/botón.
-    texto_previo = label_instrucciones.cget("text")
-    color_previo = label_instrucciones.cget("fg")
-    label_instrucciones.config(text=f"Cargando {formatear_nombre_rom(nombre_archivo)}...", fg=COLOR_ACENTO)
-    app.update_idletasks()
+def iniciar_juego(nombre_archivo):
     try:
-        sp.run([snes9x_bin, ruta_archivo])
-    finally:
-        label_instrucciones.config(text=texto_previo, fg=color_previo)
+        emulador.iniciar(os.path.join(directorio, nombre_archivo), control.descripcion)
+    except OSError as e:
+        mostrar_aviso(f"No se pudo abrir el emulador: {e}")
+        return
+    estado[0] = "juego"
+    label_instrucciones.config(
+        text=f"Cargando {formatear_nombre_rom(nombre_archivo)}...", fg=COLOR_ACENTO)
+
+def mostrar_aviso(texto):
+    label_instrucciones.config(text=texto, fg="#ff6b6b")
+
+def actualizar_estado_control():
+    if control.descripcion:
+        texto, color = "Control conectado", COLOR_ACENTO
+    elif MODO_DEV:
+        texto, color = "Modo teclado (dev)", "#e8c35c"
+    else:
+        texto, color = "Conecta un control", "#ff6b6b"
+    punto_control.config(fg=color)
+    label_control.config(text=texto)
+
+def atender_evento(accion):
+    if accion in ("conectado", "desconectado"):
+        actualizar_estado_control()
+    elif estado[0] == "juego":
+        if accion == "salir_juego":
+            emulador.terminar()
+    elif accion == "arriba":
+        mover_seleccion(-1, 0)
+    elif accion == "abajo":
+        mover_seleccion(1, 0)
+    elif accion == "izquierda":
+        mover_seleccion(0, -1)
+    elif accion == "derecha":
+        mover_seleccion(0, 1)
+    elif accion == "a":
+        confirmar_seleccion()
+    elif accion == "b":
+        cancelar()
+
+def cancelar():
+    if estado[0] != "menu":
+        return
+    accion_pendiente[0] = None
+    restaurar_texto_instrucciones()
+    if ventanas:
+        cerrar_ventana_usb_activa()
+
+def ciclo():
+    # Único punto donde la interfaz atiende al control y al emulador.
+    try:
+        # Se revisa primero: lo que quedó en cola durante la partida se
+        # atiende en estado "juego" y se descarta.
+        while True:
+            atender_evento(eventos.get_nowait())
+    except queue.Empty:
+        pass
+    if estado[0] == "juego":
+        codigo = emulador.revisar()
+        if codigo is not None:
+            estado[0] = "menu"
+            restaurar_texto_instrucciones()
+            if codigo != 0:
+                mostrar_aviso(f"El juego terminó con error ({codigo}). Detalles en ~/retro-console/mednafen.log")
+            app.lift()
+            app.focus_force()
+    app.after(20, ciclo)
 
 def cargar_archivos():
     os.makedirs(directorio, exist_ok=True)
-    return sorted([archivo for archivo in os.listdir(directorio) if (archivo.endswith('.smc') or archivo.endswith('.sfc'))])
-
-# Extensión de archivo -> nombre de consola que se muestra en cada mosaico.
-SISTEMAS_POR_EXTENSION = {
-    '.smc': 'SNES',
-    '.sfc': 'SNES',
-}
+    return sorted([archivo for archivo in os.listdir(directorio) if es_rom(archivo)])
 
 EXTENSIONES_PORTADA = ('.png', '.jpg', '.jpeg')
 
@@ -98,8 +135,8 @@ def formatear_nombre_rom(nombre_archivo):
     return ' '.join(formateadas) if formateadas else base
 
 def obtener_sistema(nombre_archivo):
-    extension = os.path.splitext(nombre_archivo)[1].lower()
-    return SISTEMAS_POR_EXTENSION.get(extension, '???')
+    sistema = sistema_de(nombre_archivo)
+    return sistema[0] if sistema else '???'
 
 def buscar_portada(nombre_archivo):
     # Busca una imagen con el mismo nombre base que la ROM, en el mismo
@@ -176,9 +213,7 @@ def indice_en_fila(fila, columna_objetivo):
     return min(candidatos, key=lambda i: abs(posiciones[i][1] - columna_objetivo))
 
 def mover_seleccion(delta_fila, delta_columna):
-    if splash_activo[0]:
-        return
-    if not tiles:
+    if estado[0] != "menu" or not tiles:
         return
     if accion_pendiente[0] is not None:
         accion_pendiente[0] = None
@@ -205,7 +240,7 @@ def mover_seleccion(delta_fila, delta_columna):
                 resaltar_seleccion()
 
 def confirmar_seleccion():
-    if splash_activo[0] or not tiles:
+    if estado[0] != "menu" or not tiles:
         return
     tile = tiles[indice_seleccionado[0]]
     tipo = getattr(tile, "tipo_item", None)
@@ -227,7 +262,7 @@ def confirmar_seleccion():
                 fg="#ff6b6b",
             )
     elif tipo == "rom":
-        ejecutar_snes9x(tile.archivo_item)
+        iniciar_juego(tile.archivo_item)
 
 def seleccionar_tile_por_click(tile):
     indice_seleccionado[0] = indice_de_tile(tile)
@@ -235,36 +270,6 @@ def seleccionar_tile_por_click(tile):
     restaurar_texto_instrucciones()
     resaltar_seleccion()
     confirmar_seleccion()
-
-def joystick_control():
-    # Lee los eventos del control y navega el grid directamente,
-    # sin simular movimientos de mouse ni teclado.
-    for event in joystick.read_loop():
-        if event.type == ecodes.EV_ABS and event.code == 17 and event.value != 0:
-            # Cruceta vertical (eje Y)
-            app.after(0, lambda v=event.value: mover_seleccion(1 if v == 1 else -1, 0))
-        elif event.type == ecodes.EV_ABS and event.code == 16 and event.value != 0:
-            # Cruceta horizontal (eje X)
-            app.after(0, lambda v=event.value: mover_seleccion(0, -1 if v == 1 else 1))
-        elif event.type == ecodes.EV_KEY and event.code == 545 and event.value == 1:
-            app.after(0, lambda: mover_seleccion(1, 0))
-        elif event.type == ecodes.EV_KEY and event.code == 544 and event.value == 1:
-            app.after(0, lambda: mover_seleccion(-1, 0))
-        elif event.type == ecodes.EV_KEY and event.code == 546 and event.value == 1:
-            app.after(0, lambda: mover_seleccion(0, -1))
-        elif event.type == ecodes.EV_KEY and event.code == 547 and event.value == 1:
-            app.after(0, lambda: mover_seleccion(0, 1))
-        elif event.type == ecodes.EV_KEY and event.code == 305 and event.value == 1:
-            # Botón B: confirma la selección actual (jugar / apagar / reiniciar)
-            app.after(0, confirmar_seleccion)
-        elif event.type == ecodes.EV_KEY and event.code == 317 and event.value == 1:
-            # THUMBL: cierra la ventana de importación de USB, si hay una abierta
-            app.after(0, cerrar_ventana_usb_activa)
-        elif event.type == ecodes.EV_KEY and event.code == 307 and event.value == 1:
-            print('Botón X presionado')
-        elif event.type == ecodes.EV_KEY and event.code == 316 and event.value == 1:
-            print('Botón XBOX presionado')
-
 
 #Funciones necesarias para la detección de dispositivos USB
 
@@ -301,7 +306,8 @@ def detectar_usb():
     global dispositivo
     while True:
         time.sleep(4) #Espera para dar tiempo a que la USB termine de montarse
-        if (usb == 1):
+        # Durante una partida se espera: la lista se abriría sobre el juego.
+        if (usb == 1 and estado[0] == "menu"):
             time.sleep(4)
             usb_nuevo = get_mount_point("/dev/" + dispositivo.sys_name)
             print("La ruta del dispositivo es: " + usb_nuevo)
@@ -320,7 +326,7 @@ def mostrar_contenido_usb(ruta_dispositivo):
     #    return
 
     print("La ruta del dispositivo es: " + ruta_dispositivo)
-    archivos = [archivo for archivo in os.listdir(ruta_dispositivo) if (archivo.endswith('.smc') or archivo.endswith('.sfc'))]
+    archivos = [archivo for archivo in os.listdir(ruta_dispositivo) if es_rom(archivo)]
     ventana_usb = tk.Toplevel()
     ventana_usb.overrideredirect(True)
 
@@ -347,7 +353,7 @@ def copiar_archivos_smc(desde_usb, a_directorio=directorio):
         if not os.path.exists(a_directorio):
             os.makedirs(a_directorio)
 
-        archivos_smc = [archivo for archivo in os.listdir(desde_usb) if (archivo.endswith('.smc') or archivo.endswith('.sfc'))]
+        archivos_smc = [archivo for archivo in os.listdir(desde_usb) if es_rom(archivo)]
 
         for archivo in archivos_smc:
             origen = os.path.join(desde_usb, archivo)
@@ -520,10 +526,6 @@ posiciones = []
 imagenes_referencia = []
 indice_seleccionado = [0]
 accion_pendiente = [None]
-# Mientras se ve el splash se ignora la entrada: si no, un botón presionado
-# durante el arranque lanzaría un juego que todavía no se ve.
-splash_activo = [True]
-
 archivos_actuales.extend(cargar_archivos())
 
 # Paleta de la interfaz: tema oscuro tipo consola, con un acento verde para
@@ -560,30 +562,19 @@ tk.Label(
     font=("DejaVu Sans", 22, "bold"), padx=24,
 ).pack(side="left", pady=10)
 
-# Indicador de estado del control: útil para saber de un vistazo si el
-# sistema detectó el gamepad, sin tener que mirar la terminal.
-if joystick:
-    texto_estado_control = "Control conectado"
-    color_estado_control = COLOR_ACENTO
-elif MODO_DEV:
-    texto_estado_control = "Modo teclado (dev)"
-    color_estado_control = "#e8c35c"
-else:
-    texto_estado_control = "Sin control"
-    color_estado_control = "#ff6b6b"
-
+# Indicador de estado del control (ver actualizar_estado_control).
 frame_estado_control = tk.Frame(barra_encabezado, bg=COLOR_BARRA)
 frame_estado_control.pack(side="right", padx=24)
 
-tk.Label(
-    frame_estado_control, text="●", bg=COLOR_BARRA, fg=color_estado_control,
-    font=("DejaVu Sans", 14),
-).pack(side="left")
+punto_control = tk.Label(frame_estado_control, text="●", bg=COLOR_BARRA, font=("DejaVu Sans", 14))
+punto_control.pack(side="left")
 
-tk.Label(
-    frame_estado_control, text=texto_estado_control, bg=COLOR_BARRA, fg=COLOR_TEXTO_TENUE,
+label_control = tk.Label(
+    frame_estado_control, bg=COLOR_BARRA, fg=COLOR_TEXTO_TENUE,
     font=("DejaVu Sans", 12), padx=8,
-).pack(side="left")
+)
+label_control.pack(side="left")
+actualizar_estado_control()
 
 # Línea de acento bajo el encabezado, para separar visualmente del cuerpo.
 tk.Frame(app, bg=COLOR_ACENTO, height=2).pack(side="top", fill="x")
@@ -596,7 +587,7 @@ barra_pie.pack(side="bottom", fill="x")
 if MODO_DEV:
     texto_instrucciones = "↑ ↓ ← →  Navegar      Enter  Confirmar      Esc  Salir"
 else:
-    texto_instrucciones = "Cruceta  Navegar      Botón B  Confirmar"
+    texto_instrucciones = "Cruceta  Navegar      A  Confirmar      B  Cancelar      VIEW + MENU  Salir del juego"
 
 label_instrucciones = tk.Label(
     barra_pie, text=texto_instrucciones, bg=COLOR_BARRA, fg=COLOR_TEXTO_TENUE,
@@ -671,16 +662,13 @@ except Exception as e:
     print(f"[!] No se pudo iniciar la detección de USB en este entorno: {e}")
     print("[!] El programa continúa sin la función de importación por USB.")
 
-# Inicia un hilo para el control mediante el joystick, solo si hay uno conectado
-if joystick:
-    hilo_joystick = threading.Thread(target=joystick_control)
-    hilo_joystick.daemon = True
-    hilo_joystick.start()
+control.start()
+ciclo()
 
 animar_pulso()
 
 def al_terminar_splash():
-    splash_activo[0] = False
+    estado[0] = "menu"
 
 # La galería ya está construida debajo; el splash la cubre 5 segundos.
 mostrar_splash(app, al_terminar_splash)
