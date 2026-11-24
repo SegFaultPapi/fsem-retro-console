@@ -35,8 +35,7 @@ chmod +x autorun.sh
 ```
 
 Este script instala `python3-tk` y las dependencias de Python (`Pillow`, `evdev`,
-`pyudev`) como paquetes de Debian vía `apt`, y compila el emulador Snes9x en
-`~/snes9x-1.60/gtk/build/snes9x-gtk`.
+`pyudev`) y el emulador Mednafen como paquetes de Debian vía `apt`.
 
 ### 3. Instalar un servidor X mínimo
 
@@ -91,7 +90,7 @@ startx
 | Tecla | Acción |
 |---|---|
 | `↑` / `↓` | Navegar la lista de ROMs disponibles |
-| `Enter` | Ejecutar la ROM seleccionada en Snes9x |
+| `Enter` | Ejecutar la ROM seleccionada en Mednafen |
 | `Esc` | Cerrar la aplicación |
 
 ## Splash y sonido de arranque

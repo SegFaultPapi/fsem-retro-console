@@ -24,6 +24,13 @@ declarada por el autor en la propia fuente de descarga. Las etiquetas "gratis" y
 público" no son equivalentes: un archivo puede ofrecerse sin costo y, aun así, no estar
 legalmente disponible para redistribución.
 
+## Fuentes utilizadas
+
+Las ROMs del prototipo provienen de [retrobrews/snes-games](https://github.com/retrobrews/snes-games)
+y de itch.io. Autores, licencias y restricciones: [`src/THIRD_PARTY.md`](../src/THIRD_PARTY.md).
+Todo el catálogo de retrobrews/snes-games es de SNES (16 bits); para el componente clave se
+necesitan además títulos de 8 y 32 bits.
+
 ## Fuentes sugeridas
 
 - **[itch.io – colección de homebrew para SNES](https://itch.io/c/4842778/snes-homebrews)**
@@ -55,4 +62,4 @@ legalmente disponible para redistribución.
 3. Verificar que las ROMs seleccionadas cubran distintos anchos de palabra (8, 16 y 32
    bits) cuando sea posible, conforme al componente clave de la especificación del curso.
 4. Colocar los archivos finales en `~/retro-console/roms` en la Raspberry Pi, según lo
-   descrito en `src/README.md`.
+   descrito en `readme.MD`.
