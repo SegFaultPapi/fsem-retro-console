@@ -6,6 +6,7 @@
 # Autor(es):   SegFaultPapi
 # Licencia:    MIT (ver LICENSE)
 
+import logging
 import threading
 import time
 
@@ -100,7 +101,7 @@ class Control(threading.Thread):
             try:
                 self._leer(dispositivo)
             except OSError as e:
-                print(f"[!] Se perdió el control: {e}")
+                logging.warning("se perdió el control: %s", e)
             finally:
                 self.descripcion = None
                 dispositivo.close()
@@ -134,10 +135,12 @@ class Control(threading.Thread):
 
     def _leer(self, dispositivo):
         # No se toma en exclusiva (grab): el emulador lee el mismo control.
-        print(f"Control detectado: {dispositivo.name}")
+        logging.info("control detectado: %s", self.descripcion)
         self.cola.put("conectado")
         traductor = Traductor(self.rangos)
         for evento in dispositivo.read_loop():
             accion = traductor.traducir(evento.type, evento.code, evento.value)
+            if evento.type == EV_KEY and evento.value == 1:
+                logging.info("botón %s -> %s", evento.code, accion)
             if accion:
                 self.cola.put(accion)

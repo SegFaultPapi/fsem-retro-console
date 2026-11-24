@@ -9,13 +9,14 @@
 import tkinter as tk
 from tkinter import PhotoImage
 import os
+import logging
 import math
 import queue
 import sys
 from PIL import Image, ImageTk
 from control import Control
 from pantalla_usb import PantallaUSB
-from emulador import Emulador, es_rom, sistema_de
+from emulador import Emulador, es_rom, sistema_de, ultimo_mensaje
 import importador
 from splash import mostrar_splash
 
@@ -30,6 +31,11 @@ directorio_iconos = os.path.expanduser("~/retro-console/icons")
 
 os.makedirs(directorio_actual, exist_ok=True)
 os.makedirs(directorio_iconos, exist_ok=True)
+
+logging.basicConfig(
+    filename=os.path.expanduser("~/retro-console/consola.log"), filemode="w",
+    level=logging.INFO, format="%(asctime)s %(message)s",
+)
 
 # Respaldo con teclado para pruebas del equipo; no cambia lo que se ve en
 # pantalla. La consola se opera únicamente con gamepad.
@@ -55,6 +61,7 @@ def iniciar_juego(nombre_archivo):
     try:
         emulador.iniciar(os.path.join(directorio, nombre_archivo), control.descripcion)
     except OSError as e:
+        logging.error("no se pudo abrir el emulador: %s", e)
         mostrar_aviso(f"No se pudo abrir el emulador: {e}")
         return
     estado[0] = "juego"
@@ -170,7 +177,7 @@ def ciclo():
             estado[0] = "menu"
             restaurar_texto_instrucciones()
             if codigo != 0:
-                mostrar_aviso(f"El juego terminó con error ({codigo}). Detalles en ~/retro-console/mednafen.log")
+                mostrar_aviso(f"El juego no pudo abrirse: {ultimo_mensaje() or codigo}")
             mostrar_frontend()
     if usb_pendientes and (estado[0] == "menu" or (estado[0] == "juego" and emulador.activo()
                                                    and not emulador.cerrando())):

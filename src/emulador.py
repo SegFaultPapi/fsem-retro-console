@@ -5,7 +5,9 @@
 # Autor(es):   SegFaultPapi
 # Licencia:    MIT (ver LICENSE)
 
+import logging
 import os
+import shutil
 import signal
 import subprocess as sp
 import time
@@ -83,12 +85,27 @@ def mapeo_mednafen(mando, modulo, puerto):
     return args
 
 
+def ruta_mednafen():
+    # Debian lo instala en /usr/games, que no siempre está en el PATH.
+    return shutil.which("mednafen") or "/usr/games/mednafen"
+
+
+def ultimo_mensaje():
+    """Última línea del registro de Mednafen, para mostrarla en pantalla."""
+    try:
+        with open(os.path.join(BASE, "mednafen.log"), errors="replace") as f:
+            lineas = [l.strip() for l in f if l.strip()]
+    except OSError:
+        return ""
+    return lineas[-1][:90] if lineas else ""
+
+
 def construir_comando(ruta, mando):
     _nombre, modulo, puerto = sistema_de(ruta)
     # Se usa la salida predeterminada de ALSA, igual que el splash.
     salida = os.environ.get("RETRO_CONSOLE_AUDIO") or "sexyal-literal-default"
     comando = [
-        "mednafen", "-force_module", modulo,
+        ruta_mednafen(), "-force_module", modulo,
         "-video.fs", "1", f"-{modulo}.stretch", "aspect",
         "-sound.driver", "alsa", "-sound.device", salida,
     ]
@@ -113,9 +130,11 @@ class Emulador:
             # Al pausar por USB el juego pierde el foco: no debe minimizarse.
             SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS="0",
         )
+        comando = construir_comando(ruta, mando)
+        logging.info("ejecutando: %s", comando)
         with open(os.path.join(BASE, "mednafen.log"), "w") as registro:
             self.proceso = sp.Popen(
-                construir_comando(ruta, mando), env=entorno,
+                comando, env=entorno,
                 stdin=sp.DEVNULL, stdout=registro, stderr=sp.STDOUT,
             )
         self.pausado = False
@@ -131,6 +150,7 @@ class Emulador:
                 self.proceso.kill()
             return None
         self.proceso = None
+        logging.info("el emulador terminó con código %s", codigo)
         return codigo
 
     def _senal(self, senal):
