@@ -108,7 +108,11 @@ class Emulador:
     def iniciar(self, ruta, mando):
         base = os.path.join(BASE, "mednafen")
         os.makedirs(base, exist_ok=True)
-        entorno = dict(os.environ, MEDNAFEN_HOME=base)
+        entorno = dict(
+            os.environ, MEDNAFEN_HOME=base,
+            # Al pausar por USB el juego pierde el foco: no debe minimizarse.
+            SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS="0",
+        )
         with open(os.path.join(BASE, "mednafen.log"), "w") as registro:
             self.proceso = sp.Popen(
                 construir_comando(ruta, mando), env=entorno,
@@ -132,6 +136,12 @@ class Emulador:
     def _senal(self, senal):
         if self.proceso and self.proceso.poll() is None:
             self.proceso.send_signal(senal)
+
+    def activo(self):
+        return self.proceso is not None and self.proceso.poll() is None
+
+    def cerrando(self):
+        return self._limite is not None
 
     def pausar(self):
         self._senal(signal.SIGSTOP)

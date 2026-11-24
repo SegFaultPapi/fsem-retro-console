@@ -128,6 +128,3 @@ siguientes limitaciones son intencionales y no deben interpretarse como fallas:
 - El arranque automático del sistema (systemd y autologin) aún no ha sido
   implementado; esta guía requiere iniciar la sesión y ejecutar `startx`
   manualmente.
-- El flujo de importación por USB, en su estado actual, no pausa la emulación,
-  no evita archivos duplicados ni solicita confirmación para continuar o volver
-  al menú. Estas funciones se encuentran pendientes de implementación.

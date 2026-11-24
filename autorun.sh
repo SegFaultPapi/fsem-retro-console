@@ -1,5 +1,9 @@
 #!/usr/bin/bash
 #
+# Descripción: instala y configura la consola en Raspberry Pi OS Lite.
+# Autor(es):   SegFaultPapi
+# Licencia:    MIT (ver LICENSE)
+#
 # Se detiene en el primer error en vez de seguir en silencio (p. ej. un
 # "apt install" sin -y que queda esperando confirmación, o una compilación
 # que falla): así un paso roto no deja pasos siguientes en un estado
@@ -42,6 +46,22 @@ function preparar_directorios(){
   cp -n "$repo_dir"/src/icons/*.png ~/retro-console/icons/
 
   echo -e "[+] Directorios listos en ~/retro-console"
+}
+
+function configurar_usb(){
+  local repo_dir="$1"
+  echo -e "[!] Configurando la importación desde USB"
+  sudo apt-get install -y util-linux udev
+
+  # El ayudante queda en una ruta de root: el usuario puede ejecutarlo con
+  # sudo, pero no modificarlo.
+  sudo install -o root -g root -m 755 "$repo_dir/src/retro-usb.sh" /usr/local/sbin/retro-usb
+  local regla
+  regla="$(mktemp)"
+  echo "$USER ALL=(root) NOPASSWD: /usr/local/sbin/retro-usb" > "$regla"
+  sudo visudo -cqf "$regla"
+  sudo install -o root -g root -m 440 "$regla" /etc/sudoers.d/retro-usb
+  rm -f "$regla"
 }
 
 function configurar_entorno_grafico(){
@@ -90,6 +110,7 @@ function main(){
   install_python_deps
   instalar_emulador
   preparar_directorios "$repo_dir"
+  configurar_usb "$repo_dir"
   configurar_entorno_grafico "$repo_dir"
 }
 

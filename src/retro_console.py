@@ -1,29 +1,29 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
+#
+# Descripción: frontend de la consola: galería de títulos, navegación con
+#              gamepad, estados de la partida e importación desde USB.
+# Autor(es):   SegFaultPapi
+# Licencia:    MIT (ver LICENSE)
 
 import tkinter as tk
 from tkinter import PhotoImage
-import subprocess as sp
-import time
-import threading
-import shutil
 import os
 import math
 import queue
-import pyudev
 import sys
 from PIL import Image, ImageTk
 from control import Control
+from pantalla_usb import PantallaUSB
 from emulador import Emulador, es_rom, sistema_de
+import importador
 from splash import mostrar_splash
 
 # Directorio donde se almacenan y buscan las ROMs (en la Raspberry Pi).
 # Las portadas de cada juego también viven aquí, con el mismo nombre base
-# que la ROM (p. ej. Rastan-SA1.sfc + Rastan-SA1.png).
+# que la ROM (p. ej. blt.sfc + blt.png).
 directorio_actual = os.path.expanduser("~/retro-console/roms")
 directorio = directorio_actual
-usb = 0
-dispositivo = 0
 
 # Directorio de los iconos de la interfaz
 directorio_iconos = os.path.expanduser("~/retro-console/icons")
@@ -31,9 +31,8 @@ directorio_iconos = os.path.expanduser("~/retro-console/icons")
 os.makedirs(directorio_actual, exist_ok=True)
 os.makedirs(directorio_iconos, exist_ok=True)
 
-# Modo de desarrollo: permite probar con teclado cuando no hay un control
-# conectado (p. ej. en WSL sin passthrough USB). NO se usa en la consola
-# final, que debe operarse únicamente con gamepad.
+# Respaldo con teclado para pruebas del equipo; no cambia lo que se ve en
+# pantalla. La consola se opera únicamente con gamepad.
 MODO_DEV = os.environ.get("RETRO_CONSOLE_DEV") == "1"
 
 # Columnas del grid de mosaicos (estilo galería de juegos).
@@ -42,10 +41,12 @@ ANCHO_TILE = 180
 ALTO_PORTADA = 150
 
 
-# Estados de la consola: "splash", "menu" o "juego". Las acciones del control
-# se interpretan según el estado; así, lo que se presiona durante una partida
-# no mueve el menú ni activa Apagar.
+# Estados de la consola. Las acciones del control se interpretan según el
+# estado; así, lo que se presiona durante una partida no mueve el menú.
+#   splash -> menu <-> juego
+#   menu/juego -> usb_copiando -> usb_menu -> menu/juego
 estado = ["splash"]
+usb_pendientes = []  # memorias conectadas que aún no se importan
 eventos = queue.Queue()
 control = Control(eventos)
 emulador = Emulador()
@@ -66,19 +67,26 @@ def mostrar_aviso(texto):
 def actualizar_estado_control():
     if control.descripcion:
         texto, color = "Control conectado", COLOR_ACENTO
-    elif MODO_DEV:
-        texto, color = "Modo teclado (dev)", "#e8c35c"
     else:
         texto, color = "Conecta un control", "#ff6b6b"
     punto_control.config(fg=color)
     label_control.config(text=texto)
 
 def atender_evento(accion):
-    if accion in ("conectado", "desconectado"):
+    if isinstance(accion, tuple):
+        tipo, dato = accion
+        if tipo == "usb_insertada":
+            if dato not in usb_pendientes:
+                usb_pendientes.append(dato)
+        else:
+            mostrar_resultado_usb(dato)
+    elif accion in ("conectado", "desconectado"):
         actualizar_estado_control()
     elif estado[0] == "juego":
         if accion == "salir_juego":
             emulador.terminar()
+    elif estado[0] == "usb_menu":
+        pantalla_usb.atender(accion)
     elif accion == "arriba":
         mover_seleccion(-1, 0)
     elif accion == "abajo":
@@ -97,8 +105,55 @@ def cancelar():
         return
     accion_pendiente[0] = None
     restaurar_texto_instrucciones()
-    if ventanas:
-        cerrar_ventana_usb_activa()
+
+def mostrar_frontend():
+    # matchbox muestra al frente la última ventana en aparecer: se vuelve a
+    # mapear para quedar sobre el emulador en pausa.
+    app.withdraw()
+    app.deiconify()
+    app.attributes("-fullscreen", True)
+    app.lift()
+    app.focus_force()
+
+def iniciar_importacion():
+    global pantalla_usb
+    nodo = usb_pendientes.pop(0)
+    if estado[0] == "juego":
+        emulador.pausar()
+        mostrar_frontend()
+    accion_pendiente[0] = None
+    restaurar_texto_instrucciones()
+    estado[0] = "usb_copiando"
+    if pantalla_usb is None:
+        pantalla_usb = PantallaUSB(app, al_elegir_usb)
+    pantalla_usb.copiando()
+    importador.importar_en_hilo(nodo, directorio, eventos)
+
+def mostrar_resultado_usb(resultado):
+    actualizar_lista_archivos()
+    estado[0] = "usb_menu"
+    pantalla_usb.resultado(resultado, emulador.activo())
+
+def al_elegir_usb(opcion):
+    global pantalla_usb
+    if usb_pendientes:
+        # Se conectó otra memoria mientras tanto: se atiende antes de salir.
+        # El juego, si lo hay, sigue en pausa.
+        iniciar_importacion()
+        return
+    pantalla_usb.destruir()
+    pantalla_usb = None
+    if not emulador.activo():
+        estado[0] = "menu"
+        return
+    estado[0] = "juego"
+    if opcion == "continuar":
+        # Oculta el frontend para que el juego quede al frente.
+        app.withdraw()
+        emulador.reanudar()
+    else:
+        label_instrucciones.config(text="Cerrando el juego...", fg=COLOR_ACENTO)
+        emulador.terminar()
 
 def ciclo():
     # Único punto donde la interfaz atiende al control y al emulador.
@@ -116,8 +171,10 @@ def ciclo():
             restaurar_texto_instrucciones()
             if codigo != 0:
                 mostrar_aviso(f"El juego terminó con error ({codigo}). Detalles en ~/retro-console/mednafen.log")
-            app.lift()
-            app.focus_force()
+            mostrar_frontend()
+    if usb_pendientes and (estado[0] == "menu" or (estado[0] == "juego" and emulador.activo()
+                                                   and not emulador.cerrando())):
+        iniciar_importacion()
     app.after(20, ciclo)
 
 def cargar_archivos():
@@ -127,7 +184,7 @@ def cargar_archivos():
 EXTENSIONES_PORTADA = ('.png', '.jpg', '.jpeg')
 
 def formatear_nombre_rom(nombre_archivo):
-    # Convierte "Rastan-SA1.sfc" en "Rastan SA1": quita la extensión y separa
+    # Convierte "mi-juego_2.sfc" en "Mi Juego 2": quita la extensión y separa
     # palabras por "-"/"_", dejando en mayúsculas los acrónimos cortos.
     base = os.path.splitext(nombre_archivo)[0]
     palabras = base.replace('_', ' ').replace('-', ' ').split()
@@ -270,102 +327,6 @@ def seleccionar_tile_por_click(tile):
     restaurar_texto_instrucciones()
     resaltar_seleccion()
     confirmar_seleccion()
-
-#Funciones necesarias para la detección de dispositivos USB
-
-#Imprime las propiedades de un dispositivo
-def print_dev_info(device):
-    print("Device sys_path: {}".format(device.sys_path))
-    print("Device sys_name: {}".format(device.sys_name))
-    print("Device sys_number: {}".format(device.sys_number))
-    print("Device subsystem: {}".format(device.subsystem))
-    print("Device device_type: {}".format(device.device_type))
-    print("Device is_initialized: {}".format(device.is_initialized))
-
-#Obtiene el punto de montaje de un dispositivo USB
-def get_mount_point(path):
-    args = ["findmnt", "-unl", "-S", path]
-    cp = sp.run(args, capture_output=True, text=True)
-    out = cp.stdout.split(" ")[0]
-    return out
-
-#Manejador de eventos del Monitor-Observer: cambia una bandera al insertar o remover una USB
-def check_dev_events(action, device):
-    global usb
-    global dispositivo
-    if (action == "add"): #Si se inserta una USB
-        usb = 1
-        print_dev_info(device)
-        dispositivo = device #Guarda el objeto dispositivo en la variable global
-    if (action == "remove"): #Si se retira una USB
-        usb = 0
-
-
-def detectar_usb():
-    global usb
-    global dispositivo
-    while True:
-        time.sleep(4) #Espera para dar tiempo a que la USB termine de montarse
-        # Durante una partida se espera: la lista se abriría sobre el juego.
-        if (usb == 1 and estado[0] == "menu"):
-            time.sleep(4)
-            usb_nuevo = get_mount_point("/dev/" + dispositivo.sys_name)
-            print("La ruta del dispositivo es: " + usb_nuevo)
-            mostrar_contenido_usb(usb_nuevo)
-            usb = 0 #Reinicia la bandera de detección
-        pass
-
-
-def mostrar_contenido_usb(ruta_dispositivo):
-    global dispositivo
-
-    # Copia los archivos desde la USB al directorio local
-    app.after(0, lambda: copiar_archivos_smc(ruta_dispositivo))
-
-    #if dispositivo in ventanas:
-    #    return
-
-    print("La ruta del dispositivo es: " + ruta_dispositivo)
-    archivos = [archivo for archivo in os.listdir(ruta_dispositivo) if es_rom(archivo)]
-    ventana_usb = tk.Toplevel()
-    ventana_usb.overrideredirect(True)
-
-    mensaje = f'Archivos en {dispositivo}:\n\n'
-    mensaje += '\n'.join(archivos)
-
-    etiqueta = tk.Label(ventana_usb, text=mensaje, justify='left', anchor='w')
-    etiqueta.pack()
-
-    ventanas[dispositivo] = ventana_usb
-
-    ventana_usb.update_idletasks()
-    ancho_ventana = ventana_usb.winfo_width()
-    alto_ventana = ventana_usb.winfo_height()
-    x_pantalla = (ventana_usb.winfo_screenwidth() // 2) - (ancho_ventana // 2)
-    y_pantalla = (ventana_usb.winfo_screenheight() // 2) - (alto_ventana // 2)
-    ventana_usb.geometry('+{}+{}'.format(x_pantalla, y_pantalla))
-
-    ventana_usb.mainloop()
-
-
-def copiar_archivos_smc(desde_usb, a_directorio=directorio):
-    try:
-        if not os.path.exists(a_directorio):
-            os.makedirs(a_directorio)
-
-        archivos_smc = [archivo for archivo in os.listdir(desde_usb) if es_rom(archivo)]
-
-        for archivo in archivos_smc:
-            origen = os.path.join(desde_usb, archivo)
-            destino = os.path.join(a_directorio, archivo)
-            shutil.copy(origen, destino)
-            print(f"Archivo '{archivo}' copiado exitosamente.")
-
-    except FileNotFoundError:
-        print(f"Error: El directorio '{desde_usb}' no existe.")
-    except Exception as e:
-        print(f"Error al copiar archivos: {e}")
-
 
 def dibujar_tarjeta_redondeada(canvas, ancho, alto, radio, color, ox=0, oy=0):
     # Esquinas redondeadas sobre un Canvas, combinando rectángulos y arcos.
@@ -512,14 +473,7 @@ def actualizar_lista_archivos():
     archivos_actuales.extend(cargar_archivos())
     construir_grid()
 
-def cerrar_ventana_usb_activa():
-    # Cierra cualquier ventana de importación de USB que esté abierta
-    for disp, ventana_usb in list(ventanas.items()):
-        ventana_usb.destroy()
-        ventanas.pop(disp, None)
-    actualizar_lista_archivos()
-
-ventanas = {}
+pantalla_usb = None
 archivos_actuales = []
 tiles = []
 posiciones = []
@@ -584,10 +538,7 @@ tk.Frame(app, bg=COLOR_BARRA, height=1).pack(side="bottom", fill="x")
 barra_pie = tk.Frame(app, bg=COLOR_BARRA, height=50)
 barra_pie.pack(side="bottom", fill="x")
 
-if MODO_DEV:
-    texto_instrucciones = "↑ ↓ ← →  Navegar      Enter  Confirmar      Esc  Salir"
-else:
-    texto_instrucciones = "Cruceta  Navegar      A  Confirmar      B  Cancelar      VIEW + MENU  Salir del juego"
+texto_instrucciones = "Cruceta  Navegar      A  Confirmar      B  Cancelar      VIEW + MENU  Salir del juego"
 
 label_instrucciones = tk.Label(
     barra_pie, text=texto_instrucciones, bg=COLOR_BARRA, fg=COLOR_TEXTO_TENUE,
@@ -628,8 +579,6 @@ contenedor_acciones.pack()
 
 construir_grid()
 
-app.bind("<Escape>", salir)
-
 # Sin gestor de ventanas, X no le asigna el foco de entrada a la ventana
 # por sí solo: hay que pedirlo explícitamente, o el teclado no llega a nadie.
 app.lift()
@@ -637,30 +586,17 @@ app.focus_force()
 
 if MODO_DEV:
     # Navegación de respaldo con teclado, solo para pruebas sin control físico.
-    app.bind("<Up>", lambda event: mover_seleccion(-1, 0))
-    app.bind("<Down>", lambda event: mover_seleccion(1, 0))
-    app.bind("<Left>", lambda event: mover_seleccion(0, -1))
-    app.bind("<Right>", lambda event: mover_seleccion(0, 1))
-    app.bind("<Return>", lambda event: confirmar_seleccion())
+    app.bind("<Escape>", salir)
+    app.bind("<Up>", lambda event: atender_evento("arriba"))
+    app.bind("<Down>", lambda event: atender_evento("abajo"))
+    app.bind("<Left>", lambda event: atender_evento("izquierda"))
+    app.bind("<Right>", lambda event: atender_evento("derecha"))
+    app.bind("<Return>", lambda event: atender_evento("a"))
 
-#Configura el Monitor-Observer para detectar cambios en los dispositivos de hardware
-#En algunos entornos de prueba (p. ej. WSL sin soporte completo de netlink) esto
-#puede no estar disponible; en ese caso se avisa y se continúa sin detección de USB.
 try:
-    context = pyudev.Context()
-    monitor = pyudev.Monitor.from_netlink(context)
-    monitor.filter_by(subsystem="block", device_type="partition")
-    observer = pyudev.MonitorObserver(monitor, check_dev_events, name='monitor-observer')
-    observer.daemon = True #El MonitorObserver debe ser un hilo demonio
-    observer.start()
-
-    #Inicia un hilo para la detección de dispositivos USB
-    hilo_usb = threading.Thread(target=detectar_usb)
-    hilo_usb.daemon = True #Es importante que este hilo sea demonio
-    hilo_usb.start()
+    importador.vigilar(eventos)
 except Exception as e:
-    print(f"[!] No se pudo iniciar la detección de USB en este entorno: {e}")
-    print("[!] El programa continúa sin la función de importación por USB.")
+    print(f"[!] No se pudo iniciar la detección de USB: {e}")
 
 control.start()
 ciclo()

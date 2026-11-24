@@ -5,7 +5,7 @@ Raspberry Pi OS Lite. Proyecto final de Fundamentos de Sistemas Embebidos.
 
 - **Repositorio:** https://github.com/SegFaultPapi/fsem-retro-console
 - **Video-evidencia:** _pendiente_
-- **Autores:** Andrés (SegFaultPapi) · _pendiente: nombres completos del equipo_
+- **Autores:** SegFaultPapi · _pendiente: nombres completos del equipo_
 
 ## Estado
 
@@ -17,7 +17,7 @@ El prototipo está en desarrollo.
 | Galería con portadas e instrucciones | Implementada |
 | Emulación de NES, SNES y GBA (8, 16 y 32 bits) | Implementada con Mednafen; falta probarla en la Raspberry Pi |
 | Control con gamepad (menú, juego y salida) | Implementado; falta probarlo en la Raspberry Pi |
-| Importación desde USB | Parcial; requiere memoria ya montada, sin pausa ni control de duplicados |
+| Importación desde USB | Implementada; falta probarla en la Raspberry Pi |
 | ROMs precargadas por el instalador | Pendiente |
 | Arranque automático (systemd) | Pendiente |
 | Control remoto | Pendiente |
@@ -82,6 +82,16 @@ botones corresponden por posición. El control puede conectarse después de inic
 
 Para probar con teclado: `RETRO_CONSOLE_DEV=1 startx`.
 
+## Importar ROMs desde USB
+
+1. Conectar la memoria (FAT32, exFAT, NTFS o ext) en el menú o durante una partida.
+2. El juego se pausa y las ROMs se copian, incluso desde subcarpetas. La memoria se monta en
+   solo lectura.
+3. Se muestran las ROMs importadas y las duplicadas. Un duplicado se detecta por el SHA-256 de
+   su contenido, aunque tenga otro nombre.
+4. Elegir **Continuar juego** o **Volver a los títulos** con la cruceta y A. La memoria ya se
+   puede retirar.
+
 ## Splash y sonido
 
 Los archivos por defecto están en `src/assets`. Para personalizarlos se colocan `splash.png` y
@@ -111,6 +121,9 @@ doc/                   Guías técnicas
 src/retro_console.py   Frontend
 src/control.py         Gamepad
 src/emulador.py        Proceso de Mednafen y mapeo del control
+src/importador.py      Detección de USB y copia sin duplicados
+src/pantalla_usb.py    Pantalla de importación
+src/retro-usb.sh       Montaje de USB en solo lectura
 src/splash.py          Splash de arranque
 src/assets/            Imagen y sonido de arranque
 src/icons/             Íconos
