@@ -19,7 +19,7 @@ El prototipo está en desarrollo.
 | Control con gamepad (menú, juego y salida) | Implementado; falta probarlo en la Raspberry Pi |
 | Importación desde USB | Implementada; falta probarla en la Raspberry Pi |
 | ROMs precargadas por el instalador | Pendiente |
-| Arranque automático (systemd) | Implementado; falta probarlo en la Raspberry Pi |
+| Arranque automático (autologin de systemd) | Implementado; falta probarlo en la Raspberry Pi |
 | Control remoto | Pendiente |
 
 ## Materiales
@@ -66,16 +66,16 @@ La consola inicia sola al encender. Para mantenimiento, mantener VIEW + MENU
 La misma combinación regresa a la consola. Comandos útiles:
 
 ```bash
-sudo systemctl stop retro-console       # detener
-sudo systemctl restart retro-console    # reiniciar
-journalctl -u retro-console -b          # ver errores
+sudo systemctl restart getty@tty1       # reiniciar la consola
+cat ~/retro-console/startx.log          # errores de inicio
+tail ~/retro-console/consola.log        # registro de la consola
 ```
 
 Para volver al inicio de sesión normal:
 
 ```bash
-sudo systemctl disable --now retro-console
-sudo systemctl enable --now getty@tty1
+sudo rm /etc/profile.d/retro-console.sh /etc/systemd/system/getty@tty1.service.d/retro-console.conf
+sudo systemctl daemon-reload && sudo systemctl restart getty@tty1
 ```
 
 El splash dura 5 segundos y después aparece la galería.
@@ -92,8 +92,8 @@ El splash dura 5 segundos y después aparece la galería.
 Dentro del juego, VIEW es SELECT y MENU es START. En NES y GBA, A es A y X es B; en SNES los
 botones corresponden por posición. El control puede conectarse después de iniciar.
 
-Para probar con teclado: detener el servicio y ejecutar
-`RETRO_CONSOLE_DEV=1 startx` desde la consola local.
+Para probar con teclado: volver al inicio de sesión normal y
+ejecutar `RETRO_CONSOLE_DEV=1 startx` desde la consola local.
 
 ## Importar ROMs desde USB
 
@@ -137,7 +137,7 @@ src/emulador.py        Proceso de Mednafen y mapeo del control
 src/importador.py      Detección de USB y copia sin duplicados
 src/pantalla_usb.py    Pantalla de importación
 src/privilegios.py     Comandos que requieren permisos
-src/retro-console.service  Arranque automático
+src/retro-autostart.sh  Arranque automático
 src/retro-terminal.sh  Terminal de mantenimiento
 src/retro-usb.sh       Montaje de USB en solo lectura
 src/splash.py          Splash de arranque

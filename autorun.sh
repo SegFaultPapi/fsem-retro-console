@@ -131,14 +131,26 @@ function configurar_arranque(){
   sudo visudo -cqf "$temporal"
   sudo install -o root -g root -m 440 "$temporal" /etc/sudoers.d/retro-console
 
-  sed -e "s|@USUARIO@|$USER|g" -e "s|@HOME@|$HOME|g" \
-    "$repo_dir/src/retro-console.service" > "$temporal"
-  sudo install -o root -g root -m 644 "$temporal" /etc/systemd/system/retro-console.service
+  # Autologin en tty1: reproduce el mismo entorno que un startx manual.
+  sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+  sudo tee /etc/systemd/system/getty@tty1.service.d/retro-console.conf > /dev/null <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $USER --noissue --noclear %I \$TERM
+EOF
+  sed "s|@USUARIO@|$USER|g" "$repo_dir/src/retro-autostart.sh" > "$temporal"
+  sudo install -o root -g root -m 644 "$temporal" /etc/profile.d/retro-console.sh
   rm -f "$temporal"
+  touch ~/.hushlogin  # sin mensaje de bienvenida
+
+  # Versiones anteriores usaban un servicio propio: se retira.
+  if [ -f /etc/systemd/system/retro-console.service ]; then
+    sudo systemctl disable retro-console.service || true
+    sudo rm -f /etc/systemd/system/retro-console.service
+  fi
   sudo systemctl daemon-reload
   sudo systemctl set-default multi-user.target
-  sudo systemctl disable getty@tty1.service
-  sudo systemctl enable retro-console.service
+  sudo systemctl enable getty@tty1.service
 
   # Arranque limpio: oculta los mensajes de Linux, el cursor y el arcoíris.
   # La primera vez se guarda una copia con extensión .retro-bak.
@@ -171,7 +183,9 @@ function configurar_arranque(){
 }
 
 function main(){
-  local repo_dir="$(pwd)"
+  # Se puede ejecutar desde cualquier carpeta.
+  local repo_dir
+  repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   sudo apt-get update
   install_python_deps
   instalar_emulador
