@@ -41,7 +41,7 @@ Este script instala `python3-tk` y las dependencias de Python (`Pillow`, `evdev`
 ### 3. Instalar un servidor X mínimo
 
 ```bash
-sudo apt-get install --no-install-recommends xserver-xorg xinit x11-xserver-utils
+sudo apt-get install --no-install-recommends xserver-xorg xinit x11-xserver-utils alsa-utils
 ```
 
 Esta instalación provee únicamente la capa gráfica necesaria para mostrar una ventana
@@ -94,8 +94,23 @@ startx
 | `Enter` | Ejecutar la ROM seleccionada en Snes9x |
 | `Esc` | Cerrar la aplicación |
 
+## Splash y sonido de arranque
+
+`retro_console.py` muestra `src/assets/splash.png` durante 5 segundos mientras reproduce
+`src/assets/boot.wav`; después aparece la galería. Para personalizarlos se colocan
+`splash.png` y `boot.wav` en `~/retro-console/splash/`, que tienen prioridad.
+
+Si no se escucha, listar las salidas con `aplay -L`, probar con
+`aplay -D plughw:CARD=vc4hdmi0 src/assets/boot.wav` y, si funciona, agregar a `~/.xinitrc`,
+antes de iniciar el programa:
+
+```bash
+export RETRO_CONSOLE_AUDIO=plughw:CARD=vc4hdmi0
+```
+
 ## Validaciones a realizar
 
+- Confirmar que el splash se vea 5 segundos con sonido antes de la galería.
 - Confirmar que la interfaz se muestre a pantalla completa con la lista de ROMs
   cargada correctamente.
 - Confirmar que la navegación y el lanzamiento de una ROM funcionen mediante el

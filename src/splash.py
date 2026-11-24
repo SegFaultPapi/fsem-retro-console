@@ -1,142 +1,95 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
-# Splash de arranque: muestra una imagen a pantalla completa con un fundido
-# (negro -> imagen -> negro) mientras, en paralelo, reproduce un sonido de
-# arranque. Se ejecuta una sola vez, antes de retro_console.py, y termina
-# solo (no requiere ninguna tecla ni botón).
+# Descripción: splash de arranque. Cubre la ventana del frontend con una
+#              imagen durante 5 segundos mientras se reproduce un sonido, y
+#              después se retira para mostrar la galería de juegos.
+# Autor(es):   SegFaultPapi
+# Licencia:    MIT (ver LICENSE)
 
 import os
 import subprocess as sp
-import sys
 import tkinter as tk
-from PIL import Image, ImageDraw, ImageFont, ImageTk
+from PIL import Image, ImageTk
 
-# Imagen de la pantalla de arranque. Primero busca una personalizada en
-# ~/retro-console/splash/splash.png; si no existe, usa el placeholder
-# incluido en el repositorio.
-RUTA_REPO = os.path.dirname(os.path.abspath(__file__))
-RUTA_IMAGEN_PERSONALIZADA = os.path.expanduser("~/retro-console/splash/splash.png")
-RUTA_IMAGEN_PLACEHOLDER = os.path.join(RUTA_REPO, "assets", "splash.png")
+# Los archivos del repositorio se usan por defecto. Para personalizarlos sin
+# tocar el repositorio basta colocar otros en ~/retro-console/splash/.
+RUTA_ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+RUTA_PERSONALIZADA = os.path.expanduser("~/retro-console/splash")
 
-# Sonido de arranque. Todavía no existe un archivo real: se deja la ruta
-# lista para cuando se agregue uno (.wav). Si no está, el splash igual se
-# muestra, solo que sin audio.
-RUTA_SONIDO = os.path.expanduser("~/retro-console/splash/boot.wav")
+DURACION_MS = 5000
+# Espera máxima a que la ventana sea visible antes de iniciar de todos modos.
+ESPERA_VENTANA_MS = 1500
+COLOR_FONDO = "#12141c"  # debe coincidir con COLOR_FONDO de retro_console.py
 
-COLOR_FONDO = (18, 20, 28)  # debe coincidir con COLOR_FONDO de retro_console.py
 
-# Duración de cada etapa del fundido, en milisegundos.
-DURACION_FADE_IN = 1200
-DURACION_ESPERA = 5000
-DURACION_FADE_OUT = 900
-INTERVALO_MS = 40
-PASOS_FADE_IN = DURACION_FADE_IN // INTERVALO_MS
-PASOS_FADE_OUT = DURACION_FADE_OUT // INTERVALO_MS
+def buscar_asset(nombre):
+    ruta = os.path.join(RUTA_PERSONALIZADA, nombre)
+    return ruta if os.path.isfile(ruta) else os.path.join(RUTA_ASSETS, nombre)
 
 
 def reproducir_sonido():
-    if not os.path.isfile(RUTA_SONIDO):
-        print(f"[!] No hay sonido de arranque en {RUTA_SONIDO}; se omite el audio.")
-        return
+    """Inicia el sonido sin bloquear. Devuelve el proceso, o None si falla."""
+    ruta = buscar_asset("boot.wav")
+    if not os.path.isfile(ruta):
+        print(f"[!] No existe el sonido de arranque: {ruta}")
+        return None
+    comando = ["aplay", "-q"]
+    # Permite elegir la salida (p. ej. plughw:CARD=vc4hdmi0) si la
+    # predeterminada de ALSA no es la correcta.
+    salida = os.environ.get("RETRO_CONSOLE_AUDIO")
+    if salida:
+        comando += ["-D", salida]
     try:
-        # No bloqueante: el fundido de la imagen avanza en paralelo al audio.
-        sp.Popen(["aplay", RUTA_SONIDO], stdout=sp.DEVNULL, stderr=sp.DEVNULL)
-    except FileNotFoundError:
-        print("[!] 'aplay' no está instalado (paquete alsa-utils); se omite el audio.")
+        # Los errores de aplay se dejan visibles para poder diagnosticarlos.
+        return sp.Popen(comando + [ruta])
+    except OSError as e:
+        print(f"[!] No se pudo ejecutar aplay (paquete alsa-utils): {e}")
+        return None
 
 
-def marcar_como_placeholder(imagen):
-    # Aviso visible de que esta es la imagen de prueba, no el splash final.
-    # Solo se dibuja cuando se usa el placeholder del repo, nunca sobre una
-    # imagen personalizada puesta en ~/retro-console/splash/splash.png.
-    draw = ImageDraw.Draw(imagen)
-    texto = "PLACEHOLDER — reemplazar con el splash final"
-    try:
-        fuente = ImageFont.truetype(
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 20
-        )
-    except Exception:
-        fuente = ImageFont.load_default()
-
-    bbox = draw.textbbox((0, 0), texto, font=fuente)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
-    x = (imagen.width - tw) // 2
-    y = imagen.height - th - 40
-
-    draw.rectangle([0, y - 12, imagen.width, y + th + 12], fill=(0, 0, 0))
-    draw.text((x, y), texto, font=fuente, fill=(255, 210, 80))
-    return imagen
-
-def cargar_imagen_base(ancho, alto):
-    es_placeholder = not os.path.isfile(RUTA_IMAGEN_PERSONALIZADA)
-    ruta = RUTA_IMAGEN_PLACEHOLDER if es_placeholder else RUTA_IMAGEN_PERSONALIZADA
-    imagen = Image.open(ruta).convert("RGB")
-
-    # Escala la imagen para cubrir toda la pantalla, recortando el sobrante,
-    # en vez de deformarla al tamaño exacto del monitor.
+def cargar_imagen(ancho, alto):
+    # Cubre toda la pantalla recortando el sobrante, sin deformar la imagen.
+    imagen = Image.open(buscar_asset("splash.png")).convert("RGB")
     escala = max(ancho / imagen.width, alto / imagen.height)
-    nuevo_ancho = int(imagen.width * escala)
-    nuevo_alto = int(imagen.height * escala)
-    imagen = imagen.resize((nuevo_ancho, nuevo_alto))
-
-    izquierda = (nuevo_ancho - ancho) // 2
-    arriba = (nuevo_alto - alto) // 2
-    imagen = imagen.crop((izquierda, arriba, izquierda + ancho, arriba + alto))
-
-    if es_placeholder:
-        imagen = marcar_como_placeholder(imagen)
-
-    return imagen
+    nuevo_ancho = max(ancho, round(imagen.width * escala))
+    nuevo_alto = max(alto, round(imagen.height * escala))
+    imagen = imagen.resize((nuevo_ancho, nuevo_alto), Image.LANCZOS)
+    x = (nuevo_ancho - ancho) // 2
+    y = (nuevo_alto - alto) // 2
+    return imagen.crop((x, y, x + ancho, y + alto))
 
 
-def main():
-    app = tk.Tk()
-    # "overrideredirect" haría que matchbox-window-manager ignore esta
-    # ventana por completo (igual que nos pasó con retro_console.py), lo
-    # que puede dejarla mal apilada o invisible. Se usa "-fullscreen" para
-    # que matchbox sí la gestione y la muestre al frente.
-    app.attributes("-fullscreen", True)
-    app.configure(bg="black")
-    app.lift()
-    app.focus_force()
-    ancho = app.winfo_screenwidth()
-    alto = app.winfo_screenheight()
+def mostrar_splash(app, al_terminar):
+    """Muestra el splash sobre 'app' y llama a al_terminar() al retirarlo."""
+    capa = tk.Label(app, bg=COLOR_FONDO, bd=0, highlightthickness=0)
+    try:
+        foto = ImageTk.PhotoImage(
+            cargar_imagen(app.winfo_screenwidth(), app.winfo_screenheight()),
+            master=app,
+        )
+        capa.configure(image=foto)
+        capa.foto = foto  # evita que el recolector de basura la borre
+    except Exception as e:
+        # Un splash dañado no debe impedir que arranque la consola.
+        print(f"[!] No se pudo cargar la imagen del splash: {e}")
 
-    label = tk.Label(app, bg="black", bd=0, highlightthickness=0)
-    label.place(x=0, y=0, width=ancho, height=alto)
+    iniciado = False
 
-    imagen_base = cargar_imagen_base(ancho, alto)
-    negro = Image.new("RGB", (ancho, alto), COLOR_FONDO)
+    def terminar():
+        capa.destroy()
+        al_terminar()
 
-    referencias_fotos = []  # evita que el recolector de basura borre las imágenes
+    def iniciar(_evento=None):
+        # Los 5 segundos corren desde que la ventana es visible.
+        nonlocal iniciado
+        if iniciado:
+            return
+        iniciado = True
+        reproducir_sonido()
+        app.after(DURACION_MS, terminar)
 
-    def mostrar_frame(imagen):
-        foto = ImageTk.PhotoImage(imagen)
-        referencias_fotos.append(foto)
-        label.configure(image=foto)
-
-    def fundido(origen, destino, paso, total, al_terminar):
-        t = paso / total
-        frame = Image.blend(origen, destino, t)
-        mostrar_frame(frame)
-        if paso < total:
-            app.after(INTERVALO_MS, lambda: fundido(origen, destino, paso + 1, total, al_terminar))
-        else:
-            al_terminar()
-
-    def iniciar_espera():
-        app.after(DURACION_ESPERA, iniciar_fade_out)
-
-    def iniciar_fade_out():
-        fundido(imagen_base, negro, 0, PASOS_FADE_OUT, app.destroy)
-
-    reproducir_sonido()
-    fundido(negro, imagen_base, 0, PASOS_FADE_IN, iniciar_espera)
-
-    app.mainloop()
-
-
-if __name__ == "__main__":
-    main()
+    capa.bind("<Map>", iniciar)
+    app.after(ESPERA_VENTANA_MS, iniciar)
+    capa.place(x=0, y=0, relwidth=1, relheight=1)
+    capa.lift()

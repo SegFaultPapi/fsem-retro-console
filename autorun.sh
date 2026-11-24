@@ -74,11 +74,8 @@ function preparar_directorios(){
 
   mkdir -p ~/retro-console/roms ~/retro-console/icons ~/retro-console/splash
   cp -n "$repo_dir"/src/icons/*.png ~/retro-console/icons/
-  cp -n "$repo_dir"/src/assets/splash.png ~/retro-console/splash/splash.png
 
   echo -e "[+] Directorios listos en ~/retro-console"
-  echo -e "[!] Falta agregar ~/retro-console/splash/boot.wav con el sonido de"
-  echo -e "    arranque; sin ese archivo, el splash se muestra sin audio."
 }
 
 function configurar_entorno_grafico(){
@@ -108,13 +105,12 @@ EOF
 
   # El usuario necesita pertenecer a estos grupos para que Xorg pueda
   # abrir la terminal virtual (/dev/tty0) y los dispositivos de video.
-  sudo usermod -aG tty,video "$USER"
+  sudo usermod -aG tty,video,audio "$USER"
 
   cat > ~/.xinitrc <<EOF
 #!/bin/sh
 export RETRO_CONSOLE_DEV=1
 matchbox-window-manager -use_titlebar no &
-python3 $repo_dir/src/splash.py
 exec python3 $repo_dir/src/retro_console.py
 EOF
   chmod +x ~/.xinitrc

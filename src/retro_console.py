@@ -14,6 +14,7 @@ from evdev import InputDevice, ecodes
 import evdev
 import sys
 from PIL import Image, ImageTk
+from splash import mostrar_splash
 
 # Directorio donde se almacenan y buscan las ROMs (en la Raspberry Pi).
 # Las portadas de cada juego también viven aquí, con el mismo nombre base
@@ -175,6 +176,8 @@ def indice_en_fila(fila, columna_objetivo):
     return min(candidatos, key=lambda i: abs(posiciones[i][1] - columna_objetivo))
 
 def mover_seleccion(delta_fila, delta_columna):
+    if splash_activo[0]:
+        return
     if not tiles:
         return
     if accion_pendiente[0] is not None:
@@ -202,7 +205,7 @@ def mover_seleccion(delta_fila, delta_columna):
                 resaltar_seleccion()
 
 def confirmar_seleccion():
-    if not tiles:
+    if splash_activo[0] or not tiles:
         return
     tile = tiles[indice_seleccionado[0]]
     tipo = getattr(tile, "tipo_item", None)
@@ -517,6 +520,9 @@ posiciones = []
 imagenes_referencia = []
 indice_seleccionado = [0]
 accion_pendiente = [None]
+# Mientras se ve el splash se ignora la entrada: si no, un botón presionado
+# durante el arranque lanzaría un juego que todavía no se ve.
+splash_activo = [True]
 
 archivos_actuales.extend(cargar_archivos())
 
@@ -672,5 +678,11 @@ if joystick:
     hilo_joystick.start()
 
 animar_pulso()
+
+def al_terminar_splash():
+    splash_activo[0] = False
+
+# La galería ya está construida debajo; el splash la cubre 5 segundos.
+mostrar_splash(app, al_terminar_splash)
 
 app.mainloop()
