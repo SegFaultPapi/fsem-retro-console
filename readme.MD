@@ -5,27 +5,25 @@ Raspberry Pi OS Lite. Proyecto final de Fundamentos de Sistemas Embebidos.
 
 - **Repositorio:** https://github.com/SegFaultPapi/fsem-retro-console
 - **Video-evidencia:** _pendiente_
-- **Autores:** SegFaultPapi · _pendiente: nombres completos del equipo_
+- **Autores:** [SegFaultPapi](https://github.com/SegFaultPapi)
 
 ## Estado
 
-El prototipo está en desarrollo.
-
 | Función | Estado |
 |---|---|
-| Splash de 5 s con sonido | Implementado; falta probarlo en la Raspberry Pi |
-| Galería con portadas e instrucciones | Implementada |
-| Emulación de NES, SNES y GBA (8, 16 y 32 bits) | Implementada con Mednafen; falta probarla en la Raspberry Pi |
-| Control con gamepad (menú, juego y salida) | Implementado; falta probarlo en la Raspberry Pi |
-| Importación desde USB | Implementada; falta probarla en la Raspberry Pi |
-| ROMs precargadas por el instalador | Pendiente |
-| Arranque automático (autologin de systemd) | Implementado; falta probarlo en la Raspberry Pi |
-| Control remoto | Pendiente |
+| Arranque directo, sin inicio de sesión ni mensajes de Linux | Probado en la Raspberry Pi |
+| Splash de 5 s con sonido | Probado en la Raspberry Pi |
+| Galería, gamepad, salida del juego, apagar y reiniciar | Probado en la Raspberry Pi |
+| Emulación con sonido (Mednafen: NES, SNES y GBA) | Juegos probados en la Raspberry Pi; falta registrar la prueba de cada sistema |
+| USB: pausa, copia, lista, duplicados, continuar o volver | Probado en la Raspberry Pi |
+| Manejo con control de Xbox One con cable | Probado en la Raspberry Pi |
+| Apuntador y teclado en pantalla | No implementado |
+| ROMs | 5 precargadas manualmente; el instalador no las incluye |
 
 ## Materiales
 
 - Raspberry Pi 4 con fuente de alimentación y tarjeta microSD.
-- Pantalla HDMI con audio, o bocinas.
+- Pantalla HDMI y bocina con cable auxiliar de 3.5 mm (o pantalla con audio).
 - Control de Xbox One con cable USB (o equivalente reconocido por Linux).
 - Memoria USB para importar ROMs (opcional).
 - Conexión a Internet durante la instalación.
@@ -39,14 +37,14 @@ sudo apt-get update
 sudo apt-get install -y git wget
 git clone https://github.com/SegFaultPapi/fsem-retro-console
 cd fsem-retro-console
-chmod +x autorun.sh
-./autorun.sh
+bash autorun.sh
 sudo reboot
 ```
 
-`autorun.sh` instala las dependencias, instala Mednafen, crea `~/retro-console`, configura el
-entorno gráfico mínimo y **reemplaza `~/.xinitrc`**. Debe ejecutarse desde la raíz del
-repositorio. No instala ROMs. `requirements.txt` es solo referencia: no hace falta `pip`.
+`autorun.sh` instala las dependencias y Mednafen, crea `~/retro-console`, configura el entorno
+gráfico mínimo, la importación USB y el arranque directo, y **reemplaza `~/.xinitrc`**. Al final
+debe mostrar nueve `[OK]` y `[+] Listo`. Se puede ejecutar desde cualquier carpeta y repetir
+sin problema. No instala ROMs. `requirements.txt` es solo referencia: no hace falta `pip`.
 
 ## ROMs
 
@@ -117,15 +115,9 @@ python3 src/tools/generar_sonido.py
 
 ## Solución de problemas
 
-- **No se detecta el gamepad:** revisar `lsusb` y `ls /dev/input/by-id/`.
-- **Los botones no corresponden:** instalar `evtest`, ejecutar `sudo evtest` y ajustar los
-  códigos en `src/control.py`.
-- **No hay sonido:** listar salidas con `aplay -L` y probar
-  `aplay -D plughw:CARD=vc4hdmi0 src/assets/boot.wav`. Si funciona, agregar
-  `export RETRO_CONSOLE_AUDIO=plughw:CARD=vc4hdmi0` a `~/.xinitrc` antes de iniciar el programa.
-- **No aparecen juegos:** comprobar las extensiones `.nes`, `.smc`, `.sfc` o `.gba`.
-- **No abre el juego o no responde el control:** revisar `~/retro-console/mednafen.log`. Debe
-  listar el control con su ID; si no, comprobar `ls /dev/input/js0` y que `groups` incluya `input`.
+Ver [`doc/solucion-problemas.md`](doc/solucion-problemas.md). El diseño está en
+[`doc/arquitectura.md`](doc/arquitectura.md) y la lista de comprobación en
+[`doc/prueba-minima.md`](doc/prueba-minima.md).
 
 ## Estructura
 

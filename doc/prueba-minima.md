@@ -1,130 +1,39 @@
-# Guía de prueba mínima en Raspberry Pi (modo teclado)
+# Guía de pruebas
 
-## Propósito
+Autor: SegFaultPapi · Licencia: MIT
 
-Este documento describe el procedimiento para desplegar y ejecutar una versión mínima
-del prototipo sobre una Raspberry Pi con Raspbian Lite, utilizando el teclado como
-método de control temporal mientras no se dispone de un gamepad físico para las
-pruebas. Esta guía está dirigida a los integrantes del equipo y no constituye el
-procedimiento de arranque final del proyecto.
+Lista de comprobación de la consola instalada en la Raspberry Pi, **sin teclado ni mouse**.
 
-## Requisitos físicos
+## Preparación
 
-- Raspberry Pi 4 con Raspbian Lite instalado.
-- Pantalla con entrada HDMI y el cable correspondiente.
-- Teclado conectado directamente a la Raspberry Pi. Esta prueba requiere acceso por
-  consola local, ya que la interfaz debe renderizarse en la pantalla física conectada
-  a la tarjeta; no es posible realizarla a través de una sesión SSH.
-- Opcionalmente, una memoria USB con ROMs en formato `.smc`/`.sfc`, para validar el
-  flujo de importación.
+1. Instalar según [`readme.MD`](../readme.MD) y reiniciar.
+2. Colocar al menos 5 ROMs en `~/retro-console/roms`, con juegos de NES, SNES y GBA
+   (ver [`fuentes-roms.md`](fuentes-roms.md)).
+3. Conectar el control de Xbox One por USB, la pantalla y la salida de audio.
+4. Preparar una memoria USB con una ROM nueva y otra repetida con nombre distinto.
 
-## Procedimiento
+## Pruebas
 
-### 1. Clonar el repositorio
+| # | Acción | Resultado esperado |
+|---|---|---|
+| 1 | Encender | Sin mensajes de Linux ni inicio de sesión |
+| 2 | Esperar | Splash de 5 segundos con sonido y después la galería |
+| 3 | Mover la cruceta | Cambia la selección |
+| 4 | Abrir un juego de NES, uno de SNES y uno de GBA con A | Se ven, se escuchan y responden al control |
+| 5 | VIEW + MENU durante el juego | Regresa a la galería |
+| 6 | Insertar la USB con un juego abierto | El juego se pausa y aparece la lista |
+| 7 | Revisar la lista | Una ROM importada y una duplicada |
+| 8 | Elegir Continuar juego | Vuelven la imagen, el sonido y el control |
+| 9 | Insertar la USB otra vez | Todo sale duplicado |
+| 10 | Elegir Volver a los títulos | Regresa a la galería, con la ROM nueva |
+| 11 | Desconectar y reconectar el control | Se detecta de nuevo |
+| 12 | VIEW + MENU 5 segundos en el menú | Terminal de mantenimiento; la misma combinación regresa |
+| 13 | Reiniciar, con A dos veces | La consola vuelve sola a la galería |
+| 14 | Apagar, con A dos veces | La Raspberry Pi se apaga |
 
-```bash
-git clone https://github.com/SegFaultPapi/fsem-retro-console
-cd fsem-retro-console
-```
+Si algo falla, ver [`solucion-problemas.md`](solucion-problemas.md).
 
-### 2. Ejecutar el script de instalación
+## Pruebas con teclado (solo desarrollo)
 
-```bash
-chmod +x autorun.sh
-./autorun.sh
-```
-
-Este script instala `python3-tk` y las dependencias de Python (`Pillow`, `evdev`,
-`pyudev`) y el emulador Mednafen como paquetes de Debian vía `apt`.
-
-### 3. Instalar un servidor X mínimo
-
-```bash
-sudo apt-get install --no-install-recommends xserver-xorg xinit x11-xserver-utils alsa-utils
-```
-
-Esta instalación provee únicamente la capa gráfica necesaria para mostrar una ventana
-en pantalla. No incluye ningún entorno de escritorio ni gestor de ventanas, por lo que
-se mantiene conforme a la restricción del proyecto de no utilizar un entorno de
-escritorio.
-
-### 4. Agregar ROMs de prueba
-
-El script `autorun.sh` ya crea `~/retro-console/roms` y `~/retro-console/icons`, y copia
-automáticamente los íconos de la interfaz desde `src/icons/`. Solo falta colocar al menos
-una ROM `.smc`/`.sfc` de prueba en `~/retro-console/roms/` (ver
-[`doc/fuentes-roms.md`](fuentes-roms.md) para fuentes legales).
-
-### 5. Configurar el inicio de la interfaz
-
-Crear el archivo `~/.xinitrc`:
-
-```bash
-nano ~/.xinitrc
-```
-
-Con el siguiente contenido:
-
-```bash
-#!/bin/sh
-export RETRO_CONSOLE_DEV=1
-exec python3 ~/fsem-retro-console/src/retro_console.py
-```
-
-Otorgar permisos de ejecución:
-
-```bash
-chmod +x ~/.xinitrc
-```
-
-### 6. Ejecutar la aplicación
-
-Desde la consola local de la Raspberry Pi (no por SSH):
-
-```bash
-startx
-```
-
-## Controles disponibles en este modo
-
-| Tecla | Acción |
-|---|---|
-| `↑` / `↓` | Navegar la lista de ROMs disponibles |
-| `Enter` | Ejecutar la ROM seleccionada en Mednafen |
-| `Esc` | Cerrar la aplicación |
-
-## Splash y sonido de arranque
-
-`retro_console.py` muestra `src/assets/splash.png` durante 5 segundos mientras reproduce
-`src/assets/boot.wav`; después aparece la galería. Para personalizarlos se colocan
-`splash.png` y `boot.wav` en `~/retro-console/splash/`, que tienen prioridad.
-
-Si no se escucha, listar las salidas con `aplay -L`, probar con
-`aplay -D plughw:CARD=vc4hdmi0 src/assets/boot.wav` y, si funciona, agregar a `~/.xinitrc`,
-antes de iniciar el programa:
-
-```bash
-export RETRO_CONSOLE_AUDIO=plughw:CARD=vc4hdmi0
-```
-
-## Validaciones a realizar
-
-- Confirmar que el splash se vea 5 segundos con sonido antes de la galería.
-- Confirmar que la interfaz se muestre a pantalla completa con la lista de ROMs
-  cargada correctamente.
-- Confirmar que la navegación y el lanzamiento de una ROM funcionen mediante el
-  teclado.
-- De manera opcional, insertar una memoria USB con ROMs y confirmar que los
-  archivos se copien y se muestren en la ventana correspondiente.
-
-## Alcance y limitaciones
-
-Esta prueba tiene fines exclusivamente de validación durante el desarrollo. Las
-siguientes limitaciones son intencionales y no deben interpretarse como fallas:
-
-- La variable `RETRO_CONSOLE_DEV=1` habilita el control por teclado únicamente
-  para pruebas. La versión final evaluada debe ejecutarse sin esta variable,
-  exigiendo la presencia de un control físico.
-- El arranque automático del sistema (systemd y autologin) aún no ha sido
-  implementado; esta guía requiere iniciar la sesión y ejecutar `startx`
-  manualmente.
+`RETRO_CONSOLE_DEV=1 startx`, con la sesión automática deshabilitada, permite navegar con las
+flechas, Enter y Esc. No se usa en la consola final.

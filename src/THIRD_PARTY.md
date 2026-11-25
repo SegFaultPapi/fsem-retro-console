@@ -105,6 +105,3 @@ En itch.io la licencia la fija cada autor, así que debe copiarse de la página 
 
 - `src/retro_console.py` y los íconos no declaran origen. Si se adaptaron de otro proyecto,
   agregar autor, licencia, URL y «Modificado por: …».
-- El comentario de `src/retro_console.py` usa `Rastan-SA1` como ejemplo. Ese título no está en
-  retrobrews; si se usó, hay que documentar su origen y verificar que no derive de un juego
-  comercial.
