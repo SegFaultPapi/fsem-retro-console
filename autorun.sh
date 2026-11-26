@@ -4,10 +4,7 @@
 # Autor(es):   SegFaultPapi
 # Licencia:    MIT (ver LICENSE)
 #
-# Se detiene en el primer error en vez de seguir en silencio (p. ej. un
-# "apt install" sin -y que queda esperando confirmación, o una compilación
-# que falla): así un paso roto no deja pasos siguientes en un estado
-# inconsistente sin que nadie se entere.
+# Se detiene en el primer error en vez de seguir en silencio.
 set -euo pipefail
 set -E  # el aviso también aplica dentro de las funciones
 trap 'echo "[X] La instalación se detuvo en la línea $LINENO: $BASH_COMMAND" >&2' ERR
@@ -20,10 +17,7 @@ fi
 function install_python_deps(){
   echo -e "[!] Instalando dependencias de Python y la interfaz gráfica"
   sleep 2
-  # Se instalan como paquetes de Debian en vez de con pip: en Raspberry Pi OS
-  # (Bookworm/Trixie) "pip install" sin más falla por la protección
-  # externally-managed-environment (PEP 668), y estos paquetes ya están
-  # empaquetados para apt.
+  # Se instalan como paquetes de Debian en vez de con pip.
   sudo apt-get install -y \
    python3-tk \
    python3-pil \
@@ -81,9 +75,7 @@ function configurar_entorno_grafico(){
 
   # xserver-xorg-legacy + matchbox-window-manager: lo mínimo para mostrar
   # una ventana a pantalla completa sin ningún escritorio ni gestor de
-  # ventanas superpuestas. matchbox solo maximiza y enfoca automáticamente
-  # cada ventana (necesario para que el teclado/control lleguen a la app
-  # que está al frente), no trae panel, iconos ni multitarea visual.
+  # ventanas superpuestas.
   sudo apt-get install -y \
    xserver-xorg \
    xserver-xorg-legacy \

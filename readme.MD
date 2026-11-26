@@ -22,7 +22,7 @@ Lite: no usa RetroPie ni distribuciones similares, ni un entorno de escritorio.
 | Emulación con sonido (Mednafen: NES, SNES y GBA) | Probado en la Raspberry Pi; falta registrar la prueba de cada sistema |
 | Importación por USB: pausa, copia, lista, duplicados, continuar o volver | Probado en la Raspberry Pi |
 | Control remoto: apuntador (selector en pantalla que se mueve con la cruceta) y teclado | Implementado |
-| ROMs precargadas | Copiadas a mano: SNES (retrobrews, itch.io y comerciales), NES y GBA (homebrew); el instalador no las descarga; falta probar las de NES y GBA |
+| ROMs precargadas | SNES (retrobrews, itch.io y comerciales), NES y GBA (homebrew), cargadas en `~/retro-console/roms`; falta probar las de NES y GBA |
 
 ## Materiales
 
@@ -54,7 +54,7 @@ sudo reboot
 - **reemplaza `~/.xinitrc`**.
 
 Al terminar debe mostrar nueve `[OK]` y `[+] Listo`. Funciona desde cualquier carpeta y se puede
-repetir sin riesgo. Por ahora no instala ROMs (ver la siguiente sección). `requirements.txt` es
+repetir sin riesgo. Las ROMs se cargan aparte, como se explica en la siguiente sección. `requirements.txt` es
 solo de referencia: las librerías se instalan con `apt`, no con `pip`.
 
 ## ROMs

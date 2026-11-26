@@ -124,4 +124,4 @@ Referencias de Mortal Kombat II: [MobyGames](https://www.mobygames.com/game/snes
 y [The Cutting Room Floor](https://tcrf.net/Mortal_Kombat_II_(SNES)).
 
 > **Restricción:** son juegos con derechos de autor vigentes y sin licencia de distribución.
-> No se suben a este repositorio ni al `.7z`, y el instalador no los descarga.
+> No se distribuyen con el proyecto: no se suben a este repositorio ni al `.7z`.
