@@ -21,7 +21,7 @@ Lite: no usa RetroPie ni distribuciones similares, ni un entorno de escritorio.
 | Control de Xbox One con cable | Probado en la Raspberry Pi |
 | Emulación con sonido (Mednafen: NES, SNES y GBA) | Probado en la Raspberry Pi; falta registrar la prueba de cada sistema |
 | Importación por USB: pausa, copia, lista, duplicados, continuar o volver | Probado en la Raspberry Pi |
-| Apuntador y teclado en pantalla | No implementado |
+| Control remoto: apuntador (selector en pantalla que se mueve con la cruceta) y teclado | Implementado |
 | ROMs precargadas | Copiadas a mano: SNES (retrobrews, itch.io y comerciales), NES y GBA (homebrew); el instalador no las descarga; falta probar las de NES y GBA |
 
 ## Materiales
@@ -76,9 +76,6 @@ curl -fL -o thwaite.nes https://github.com/pinobatch/thwaite-nes/releases/downlo
 curl -fL -o notebook-adventure.gba https://github.com/NotImplementedLife/NotebookAdventure/releases/download/v1.3/NotebookAdventure-1-3.gba
 curl -fL -o beat-beast.gba https://github.com/afska/beat-beast/releases/download/v1.1.7/BeatBeast_jam.gba
 ```
-
-Para comprobar que se descargaron bien, comparar `sha256sum *` con los hashes de
-[`src/THIRD_PARTY.md`](src/THIRD_PARTY.md).
 
 ## Uso
 

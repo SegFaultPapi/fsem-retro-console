@@ -61,46 +61,16 @@ aparecen en la galería final.
 | ✓ | `furryrpg.sfc` | Furry RPG! | Ramsis | 2018 | Sin licencia formal; «open-source freeware» según [su autor](https://github.com/Ramsis-SNES/furryrpg) |
 | ✓ | `hilda.sfc` | Hilda | Orochii Zouveleki (O_manko) | 2016 | No encontrada; [página](https://gamejolt.com/games/hilda/162284) |
 | ✓ | `horizontal-shooter.sfc` | Horizontal Shooter | Marcus Rowe (Undisbeliever) | 2016 | Código MIT, imágenes CC0: [fuente](https://github.com/undisbeliever/horizontal-shooter) |
-| ✓ | `jetpilotrising.sfc` | Jet Pilot Rising 1.1 | Dieter Von Laser (D4S) | 2008 o 2018 (1) | No encontrada |
+| ✓ | `jetpilotrising.sfc` | Jet Pilot Rising 1.1 | Dieter Von Laser (D4S) | 2008 o 2018 | No encontrada |
 |  | `megafamilybros.smc` | Mega Family Bros | Debray Matthieu (Dieudunet) | 2012 | No encontrada |
 |  | `nwarpdaisakusen.smc` | N-Warp Daisakusen 1.0 | Dieter Von Laser (D4S) | 2009 | No encontrada; «descarga gratuita» según su `.txt` |
 | ✓ | `questformoney.sfc` | Uwol, Quest For Money | Alekmaul, Mojon Twins, KungfuFurby | 2012 | No encontrada |
-|  | `rockfall.smc` | Rockfall | Paul Lay, Harvey A. Kong Tin | 1998 | No encontrada (2) |
-|  | `saf.smc` | Skipp And Friends: Unexpected Journey | Mukunda Johnson, Ken Snyder, Steven Velema, Hubert Lamontagne | 2009 | No encontrada (2) |
-| ✓ | `superbossgaiden.sfc` | Super Boss Gaiden 1.2 | Chrono Moogle, Dieter Von Laser (D4S) | 2016 (3) | No encontrada |
+|  | `rockfall.smc` | Rockfall | Paul Lay, Harvey A. Kong Tin | 1998 | No encontrada |
+|  | `saf.smc` | Skipp And Friends: Unexpected Journey | Mukunda Johnson, Ken Snyder, Steven Velema, Hubert Lamontagne | 2009 | No encontrada |
+| ✓ | `superbossgaiden.sfc` | Super Boss Gaiden 1.2 | Chrono Moogle, Dieter Von Laser (D4S) | 2016 | No encontrada |
 |  | `tchouv2.smc` | Tchou 2 | Debray Matthieu (Dieudunet) | 2012 | No encontrada |
 
-1. El `.txt` dice 2018 y `gamelist.xml` dice 2008.
-2. Hubo edición posterior en cartucho: [Rockfall](https://www.mobygames.com/game/130651/rockfall),
-   [Skipp and Friends](https://tasvideos.org/2465G). Conviene pedir permiso antes de redistribuir.
-3. `gamelist.xml` dice 2009, pero la [prensa de su lanzamiento](https://www.nintendolife.com/news/2016/07/someone_has_actually_made_a_game_which_works_on_the_snes_playstation) es de julio de 2016.
-
 «No encontrada» no equivale a dominio público: los derechos siguen siendo del autor.
-
-### Verificar el origen de un archivo
-
-Git identifica cada archivo por un hash; si coincide, es idéntico al de retrobrews:
-
-```bash
-git hash-object ~/retro-console/roms/*.s[fm]c
-```
-
-| Archivo | Hash |
-|---|---|
-| `astrohawk.smc` | `3c88d8c9f7c3cbde8c789bd7795908c05774b20c` |
-| `blt.sfc` | `84f0e6463329621b595b49d2d0724a27fb9be097` |
-| `bucket.smc` | `c6f7dd096f2e16aeb2e783d91ea678f3ec9bc63e` |
-| `furryrpg.sfc` | `278e1ae06f3bdd98aa128ce483ed3ccb29f5a8ae` |
-| `hilda.sfc` | `e7658280b11553f175ebca927f9231a0061e9033` |
-| `horizontal-shooter.sfc` | `720f8808695a7417b815d96cc0207d9f8c33f2d9` |
-| `jetpilotrising.sfc` | `52273553857848016b221969617414aaf02b0020` |
-| `megafamilybros.smc` | `32acf3bd4bfb64a411f523161a2f4cf209e8c336` |
-| `nwarpdaisakusen.smc` | `2f7bc9d7bc039d23fad6da028a9c7ecd1e949897` |
-| `questformoney.sfc` | `41fa388b54c44c28c48001cc91c9657d49570db9` |
-| `rockfall.smc` | `c851e7042a69632232c44602de83a71e77d9ee9c` |
-| `saf.smc` | `5c75d178a0708391d702330a3403051f75dacd21` |
-| `superbossgaiden.sfc` | `8de242f170d931b6fd558bf4f887410ec0b4e0c8` |
-| `tchouv2.smc` | `7d20f9b6669c2ba50aa46ff07208e3c2bb5e719f` |
 
 ## ROMs homebrew de NES y GBA
 
@@ -126,19 +96,6 @@ Notas:
   NonCommercial permiten este uso académico, pero no venderlo.
 - Aunque las licencias lo permiten, estas ROMs tampoco se incluyen en el `.7z`, para respetar el
   límite de 15 MB.
-
-### Verificar los archivos descargados
-
-```bash
-sha256sum ~/retro-console/roms/*.nes ~/retro-console/roms/*.gba
-```
-
-| Archivo | SHA-256 |
-|---|---|
-| `openNES-Snake.nes` | `71792a9b4e4db52fb60df4633400301fac8f244f802b88d336b58e079c75acc7` |
-| `thwaite.nes` | `a2df24d9c9f72e56c2fdc4c703becc47a5700ad0158da8208247635ebeb3779c` |
-| `notebook-adventure.gba` | `944ed052a38f7d01df79bae760f102e5c19527471fc834c8986cb19606fb7e9a` |
-| `beat-beast.gba` | `2a4986bdf6bd65601f1ae08f471d0aafc3e23d57f594162f77f351a1150e43eb` |
 
 ## ROM de itch.io
 
