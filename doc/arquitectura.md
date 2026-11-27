@@ -1,6 +1,6 @@
 # Arquitectura
 
-Autor: SegFaultPapi · Licencia: MIT
+Autores: Rodríguez Montes de Oca Andrés, Vázquez Martínez Gustavo, Sánchez Álvarez Ángel Rubén · Licencia: MIT
 
 ## Vista general
 
@@ -59,9 +59,10 @@ responde, para que los botones del juego no abran otro título ni apaguen la con
 
 ## Control
 
-Se usa un control de Xbox One con cable, que el kernel maneja con el controlador `xpad`. El
-frontend lo lee con `evdev` sin tomarlo en exclusiva, porque Mednafen lee el mismo control por
-`/dev/input/jsX`.
+Se usa un control inalámbrico oficial de Xbox conectado con un cable USB de datos, así que funciona
+como control con cable, sin emparejarlo; un cable solo de carga no se detecta. El kernel lo maneja
+con el controlador `xpad`. El frontend lo lee con `evdev` sin tomarlo en exclusiva, porque
+Mednafen lee el mismo control por `/dev/input/jsX`.
 
 El mapeo de Mednafen se calcula cada vez que se abre un juego, así que no hay que configurar nada
 a mano. El identificador del control se forma con el bus, el fabricante, el producto y la
@@ -88,8 +89,9 @@ La consola se elige por la extensión de la ROM:
 | `.gba` | Game Boy Advance | 32 | `gba` |
 
 - **Pausa:** `SIGSTOP` detiene el proceso con la partida en memoria y `SIGCONT` la reanuda.
-- **Cierre:** `SIGTERM`, que Mednafen atiende de forma ordenada. Si no termina en 3 segundos, se
-  fuerza el cierre.
+- **Cierre:** `SIGTERM` seguido de `SIGCONT`, porque un proceso detenido no atiende `SIGTERM`
+  hasta reanudarse. Mednafen cierra de forma ordenada y guarda la memoria del juego. Si no termina
+  en 3 segundos, se fuerza el cierre con `SIGKILL`.
 
 ## Importación desde USB
 

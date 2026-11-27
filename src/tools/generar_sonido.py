@@ -4,7 +4,9 @@
 # Descripción: genera src/assets/boot.wav, el sonido original de arranque
 #              (arpegio y acorde sintetizados, 5 s). Solo usa la biblioteca
 #              estándar; se ejecuta únicamente para regenerar el archivo.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import array

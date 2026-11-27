@@ -3,7 +3,9 @@
 # Descripción: cambia entre la consola y una terminal de mantenimiento (tty2),
 #              que pide usuario y contraseña. Se instala como root en
 #              /usr/local/sbin/retro-terminal.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 set -euo pipefail

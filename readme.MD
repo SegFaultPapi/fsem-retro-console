@@ -8,8 +8,17 @@ Proyecto final de Fundamentos de Sistemas Embebidos. Todo el sistema parte de Ra
 Lite: no usa RetroPie ni distribuciones similares, ni un entorno de escritorio.
 
 - **Repositorio:** https://github.com/SegFaultPapi/fsem-retro-console
-- **Video-evidencia:** _pendiente de publicar_ (el enlace también estará en [`vid/video.txt`](vid/video.txt))
-- **Autor:** [SegFaultPapi](https://github.com/SegFaultPapi)
+- **Video-evidencia:** https://youtu.be/t7ZbtpmQAOw (también en [`vid/video.txt`](vid/video.txt))
+
+## Autores
+
+Grupo 2.
+
+| Integrante | Rol |
+|---|---|
+| Rodríguez Montes de Oca Andrés ([SegFaultPapi](https://github.com/SegFaultPapi)) | Desarrollo de software, administración del repositorio y control de versiones |
+| Vázquez Martínez Gustavo ([snakeassasin6-cell](https://github.com/snakeassasin6-cell)) | Configuración del hardware, investigación de la arquitectura y desarrollo de software |
+| Sánchez Álvarez Ángel Rubén ([Baticonsola](https://github.com/Baticonsola)) | Pruebas y ajustes en la Raspberry Pi por SSH, y desarrollo de software |
 
 ## Estado
 
@@ -18,17 +27,18 @@ Lite: no usa RetroPie ni distribuciones similares, ni un entorno de escritorio.
 | Arranque directo, sin inicio de sesión ni mensajes de Linux | Probado en la Raspberry Pi |
 | Splash de 5 s con sonido | Probado en la Raspberry Pi |
 | Galería, salida del juego, apagado y reinicio | Probado en la Raspberry Pi |
-| Control de Xbox One con cable | Probado en la Raspberry Pi |
-| Emulación con sonido (Mednafen: NES, SNES y GBA) | Probado en la Raspberry Pi; falta registrar la prueba de cada sistema |
+| Control inalámbrico de Xbox conectado por cable USB de datos | Probado en la Raspberry Pi |
+| Emulación con sonido (Mednafen: NES, SNES y GBA) | Probado en la Raspberry Pi |
 | Importación por USB: pausa, copia, lista, duplicados, continuar o volver | Probado en la Raspberry Pi |
-| Control remoto: apuntador (selector en pantalla que se mueve con la cruceta) y teclado | Implementado |
-| ROMs precargadas | SNES (retrobrews, itch.io y comerciales), NES y GBA (homebrew), cargadas en `~/retro-console/roms`; falta probar las de NES y GBA |
+| Control remoto: apuntador (selector en pantalla que se mueve con la cruceta; también acepta clics) y administración por SSH | Implementado |
+| ROMs precargadas | NES y GBA (homebrew de GitHub) y SNES (homebrew de retrobrews), en `~/retro-console/roms`; probadas en la Raspberry Pi |
 
 ## Materiales
 
 - Raspberry Pi 4 con su fuente de alimentación y una tarjeta microSD.
 - Pantalla HDMI y bocina con cable auxiliar de 3.5 mm (o una pantalla con audio).
-- Control de Xbox One con cable USB, o cualquier otro que Linux reconozca.
+- Control inalámbrico oficial de Xbox con un cable USB de datos (un cable solo de carga no se
+  detecta), o cualquier gamepad compatible con el controlador `xpad` de Linux.
 - Memoria USB para importar ROMs (opcional).
 - Conexión a Internet durante la instalación.
 
@@ -59,7 +69,9 @@ solo de referencia: las librerías se instalan con `apt`, no con `pip`.
 
 ## ROMs
 
-El repositorio no incluye ROMs, porque sus autores no permiten redistribuirlas. Para cargarlas:
+Las ROMs no se guardan en el repositorio para mantener el entregable por debajo de 15 MB; cada una
+se descarga de su fuente original. Cualquier ROM copiada a `~/retro-console/roms` aparece en la
+galería automáticamente. Para cargarlas:
 
 1. Descargar los juegos de su origen. Las fuentes y sus licencias están en
    [`src/THIRD_PARTY.md`](src/THIRD_PARTY.md) y los criterios para elegirlos, en

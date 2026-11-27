@@ -2,7 +2,9 @@
 #
 # Descripción: pantalla de importación desde USB. Es una capa dentro de la
 #              ventana del frontend, no una ventana aparte.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import tkinter as tk

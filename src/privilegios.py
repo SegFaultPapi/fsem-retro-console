@@ -2,7 +2,9 @@
 #
 # Descripción: ejecuta los pocos comandos que requieren permisos de root, sin
 #              contraseña (ver las reglas que instala autorun.sh en sudoers.d).
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import logging

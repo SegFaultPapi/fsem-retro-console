@@ -3,7 +3,9 @@
 # Descripción: detecta memorias USB, las monta en solo lectura y copia sus
 #              ROMs sin duplicados. Comunica el avance por una cola; nunca
 #              toca la interfaz.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import hashlib

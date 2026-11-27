@@ -1,6 +1,6 @@
 # Fuentes de ROMs legales
 
-Autor: SegFaultPapi · Licencia: MIT
+Autores: Rodríguez Montes de Oca Andrés, Vázquez Martínez Gustavo, Sánchez Álvarez Ángel Rubén · Licencia: MIT
 
 ## Propósito
 
@@ -22,15 +22,16 @@ una violación de derechos de autor y la especificación del curso lo prohíbe.
 
 Antes de usar un archivo hay que revisar la licencia en su página de origen. «Gratis» no
 significa «dominio público»: un juego puede descargarse sin costo y aun así no permitir que otros
-lo redistribuyan. Por eso el repositorio no incluye ROMs y cada instalación las descarga de su
-origen.
+lo redistribuyan.
+
+Las ROMs no se guardan en el repositorio para mantener el entregable por debajo de 15 MB; cada una
+se descarga de su fuente original.
 
 ## Fuentes utilizadas
 
 Las ROMs de las memorias USB con las que se prueba la importación vienen de
 [retrobrews/snes-games](https://github.com/retrobrews/snes-games), igual que siete de los juegos de
-la galería. La galería también incluye un port no oficial de *Rastan* descargado de itch.io y
-juegos comerciales de SNES. Autores, licencias y restricciones:
+la galería. Autores, licencias y restricciones:
 [`src/THIRD_PARTY.md`](../src/THIRD_PARTY.md).
 
 Todo el catálogo de retrobrews/snes-games es de SNES (16 bits). Para cubrir los 8 y 32 bits del

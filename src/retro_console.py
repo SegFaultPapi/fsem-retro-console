@@ -3,7 +3,9 @@
 #
 # Descripción: frontend de la consola: galería de títulos, navegación con
 #              gamepad, estados de la partida e importación desde USB.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import tkinter as tk

@@ -4,7 +4,9 @@
 # Descripción: splash de arranque. Cubre la ventana del frontend con una
 #              imagen durante 5 segundos mientras se reproduce un sonido, y
 #              después se retira para mostrar la galería de juegos.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import os

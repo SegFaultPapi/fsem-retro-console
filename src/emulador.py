@@ -2,7 +2,9 @@
 #
 # Descripción: maneja Mednafen como proceso independiente (iniciar, pausar,
 #              reanudar, terminar) y genera el mapeo del gamepad.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import logging

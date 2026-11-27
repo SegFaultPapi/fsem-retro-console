@@ -1,6 +1,6 @@
 # Solución de problemas
 
-Autor: SegFaultPapi · Licencia: MIT
+Autores: Rodríguez Montes de Oca Andrés, Vázquez Martínez Gustavo, Sánchez Álvarez Ángel Rubén · Licencia: MIT
 
 Para abrir una terminal en la Raspberry Pi, mantener **VIEW + MENU durante 5 segundos en la
 galería** (hace falta un teclado para iniciar sesión). También se puede entrar por SSH, si está

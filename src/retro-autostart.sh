@@ -1,7 +1,9 @@
 # Descripción: al iniciar sesión en tty1 abre la consola; en cualquier otra
 #              terminal (tty2, SSH) no hace nada. Se instala en
 #              /etc/profile.d/retro-console.sh y se reemplaza @USUARIO@.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 if [ "$(id -un)" = "@USUARIO@" ] && [ "$(tty)" = "/dev/tty1" ] && [ -z "${DISPLAY:-}" ]; then

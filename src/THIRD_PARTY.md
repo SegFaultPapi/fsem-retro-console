@@ -44,10 +44,9 @@ Todos usan la licencia MIT del repositorio.
 Origen: https://github.com/retrobrews/snes-games (autores según su `README.md`; fechas y notas
 según los `.txt` y `gamelist.xml` de cada juego).
 
-> **Restricción:** retrobrews indica que las ROMs están aprobadas para distribución gratuita
-> **solo en su sitio/proyecto** y pide contactar al autor para compartirlas. El repositorio no
-> declara licencia general. Por eso **ninguna ROM se sube a este repositorio ni al `.7z`**;
-> cada instalación las descarga de su origen.
+> **Restricción:** retrobrews indica que estas ROMs están aprobadas para distribución gratuita
+> **solo en su sitio/proyecto** y pide contactar al autor para compartirlas; su repositorio no
+> declara licencia general. Por eso estas ROMs se descargan directamente de retrobrews.
 
 **Uso en el proyecto:** las ROMs de las memorias USB con las que se prueba la importación
 salieron de este catálogo. La tabla lo lista completo; la columna «En la consola» marca las que
@@ -94,34 +93,5 @@ Notas:
 - Notebook Adventure se hizo para la Retro Platform Jam #4 y Beat Beast para la GBA Jam 2024.
 - Beat Beast pesa unos 32 MB, el máximo de un cartucho de GBA; los recursos con licencia
   NonCommercial permiten este uso académico, pero no venderlo.
-- Aunque las licencias lo permiten, estas ROMs tampoco se incluyen en el `.7z`, para respetar el
-  límite de 15 MB.
-
-## ROM de itch.io
-
-| Archivo | Título | Autor | Versión | Precio | Licencia publicada | Página |
-|---|---|---|---|---|---|---|
-| `Rastan-SA1.sfc` | Rastan (SNES), edición SA-1 | EnriqueGGalvez (Enrique Gálvez) | Publicado en noviembre de 2026 | «Name your own price» | No encontrada | https://enriqueggalvez.itch.io/rastan-snes |
-
-Es un port no oficial a SNES del juego de arcade *Rastan* de Taito (1987). La página no declara
-licencia ni permiso de Taito, así que no se redistribuye: cada instalación lo descarga de su
-página. La edición SA-1 requiere un emulador con soporte para ese coprocesador; también existe
-una edición estándar (`Rastan.sfc`).
-
-## ROMs comerciales
-
-La galería final también incluye juegos comerciales de SNES:
-
-| Título en la galería | Título | Desarrollador | Distribuidor | Año | Derechos |
-|---|---|---|---|---|---|
-| Contra III The Alien Wars (usa) | Contra III: The Alien Wars | Konami | Konami | 1992 | © Konami |
-| Mortal Kombat (usa) (rev 1) | Mortal Kombat | Sculptured Software | Acclaim Entertainment | 1993 | © Midway; hoy de Warner Bros. Games |
-| — | Mortal Kombat II | Sculptured Software | Acclaim Entertainment | 1994 | © Midway; hoy de Warner Bros. Games |
-| Super Metroid (japan, USA) (en,ja) | Super Metroid | Nintendo R&D1 e Intelligent Systems | Nintendo | 1994 | © Nintendo |
-| Super Mario World 2 Yoshi's Island (U) (v1.1) | Super Mario World 2: Yoshi's Island | Nintendo EAD | Nintendo | 1995 | © Nintendo |
-
-Referencias de Mortal Kombat II: [MobyGames](https://www.mobygames.com/game/snes/mortal-kombat-ii)
-y [The Cutting Room Floor](https://tcrf.net/Mortal_Kombat_II_(SNES)).
-
-> **Restricción:** son juegos con derechos de autor vigentes y sin licencia de distribución.
-> No se distribuyen con el proyecto: no se suben a este repositorio ni al `.7z`.
+- Estas ROMs no se incluyen en el `.7z`, para respetar el límite de 15 MB, aunque sus licencias lo
+  permitirían.

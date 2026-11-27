@@ -3,7 +3,9 @@
 # Descripción: monta y desmonta memorias USB en solo lectura. autorun.sh lo
 #              instala en /usr/local/sbin/retro-usb, propiedad de root, y
 #              sudoers permite ejecutarlo sin contraseña. Por eso valida todo.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 set -euo pipefail

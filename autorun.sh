@@ -1,7 +1,9 @@
 #!/usr/bin/bash
 #
 # Descripción: instala y configura la consola en Raspberry Pi OS Lite.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 #
 # Se detiene en el primer error en vez de seguir en silencio.

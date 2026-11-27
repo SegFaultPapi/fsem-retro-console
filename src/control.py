@@ -3,7 +3,9 @@
 # Descripción: lectura del gamepad (Xbox One con cable u otro compatible con
 #              el mapeo estándar de Linux). Un hilo traduce los eventos a
 #              acciones y las deja en una cola; nunca toca la interfaz.
-# Autor(es):   SegFaultPapi
+# Autor(es):   Rodríguez Montes de Oca Andrés (SegFaultPapi),
+#              Vázquez Martínez Gustavo (snakeassasin6-cell),
+#              Sánchez Álvarez Ángel Rubén (Baticonsola)
 # Licencia:    MIT (ver LICENSE)
 
 import logging

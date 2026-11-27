@@ -1,6 +1,6 @@
 # Guía de pruebas
 
-Autor: SegFaultPapi · Licencia: MIT
+Autores: Rodríguez Montes de Oca Andrés, Vázquez Martínez Gustavo, Sánchez Álvarez Ángel Rubén · Licencia: MIT
 
 Lista de comprobación para la consola ya instalada en la Raspberry Pi. Todas las pruebas se hacen
 **sin teclado ni mouse**, solo con el gamepad.
@@ -34,14 +34,6 @@ Lista de comprobación para la consola ya instalada en la Raspberry Pi. Todas la
 | 14 | Elegir Apagar y presionar A dos veces | La Raspberry Pi se apaga |
 
 Si algo falla, ver [`solucion-problemas.md`](solucion-problemas.md).
-
-## Registro de resultados
-
-Llenar después de cada prueba completa en la Raspberry Pi.
-
-| Fecha | Pruebas que pasaron | ROMs de NES / SNES / GBA probadas | Observaciones |
-|---|---|---|---|
-| _pendiente_ | | | |
 
 ## Pruebas con teclado (solo desarrollo)
 
